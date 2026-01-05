@@ -1,0 +1,205 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-crimson: var(--crimson);
+  --color-crimson-deep: var(--crimson-deep);
+  --color-ink: var(--ink);
+
+  --font-display: "Anton", "Bebas Neue", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Brand palette pulled from the DEVSHEEL logo — deep crimson + rich gold. */
+  --crimson-deep: oklch(0.32 0.15 25);
+  --crimson: oklch(0.45 0.19 25);
+  --gold: oklch(0.78 0.14 82);
+  --gold-soft: oklch(0.88 0.09 85);
+  --ink: oklch(0.16 0.03 25);
+
+  --background: oklch(0.98 0.01 60);
+  --foreground: oklch(0.16 0.03 25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0.03 25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.03 25);
+  --primary: oklch(0.45 0.19 25);
+  --primary-foreground: oklch(0.98 0.01 85);
+  --secondary: oklch(0.94 0.02 60);
+  --secondary-foreground: oklch(0.2 0.05 25);
+  --muted: oklch(0.95 0.02 60);
+  --muted-foreground: oklch(0.45 0.03 25);
+  --accent: oklch(0.78 0.14 82);
+  --accent-foreground: oklch(0.16 0.03 25);
+  --destructive: oklch(0.58 0.24 27);
+  --destructive-foreground: oklch(0.98 0.01 85);
+  --border: oklch(0.9 0.02 60);
+  --input: oklch(0.92 0.02 60);
+  --ring: oklch(0.45 0.19 25);
+
+  --gradient-hero: linear-gradient(135deg, oklch(0.32 0.15 25) 0%, oklch(0.45 0.19 25) 45%, oklch(0.28 0.13 25) 100%);
+  --gradient-gold: linear-gradient(135deg, oklch(0.88 0.09 85) 0%, oklch(0.72 0.14 78) 100%);
+  --gradient-crimson-fade: linear-gradient(180deg, oklch(0.45 0.19 25) 0%, oklch(0.25 0.1 25) 100%);
+  --shadow-glow: 0 20px 60px -20px oklch(0.45 0.19 25 / 0.55);
+  --shadow-gold: 0 10px 40px -10px oklch(0.78 0.14 82 / 0.5);
+  --shadow-lift: 0 30px 80px -30px oklch(0.16 0.03 25 / 0.35);
+}
+
+.dark {
+  --background: oklch(0.14 0.03 25);
+  --foreground: oklch(0.98 0.01 85);
+  --card: oklch(0.2 0.05 25);
+  --card-foreground: oklch(0.98 0.01 85);
+  --popover: oklch(0.2 0.05 25);
+  --popover-foreground: oklch(0.98 0.01 85);
+  --primary: oklch(0.55 0.21 25);
+  --primary-foreground: oklch(0.98 0.01 85);
+  --secondary: oklch(0.25 0.06 25);
+  --secondary-foreground: oklch(0.98 0.01 85);
+  --muted: oklch(0.24 0.05 25);
+  --muted-foreground: oklch(0.75 0.03 60);
+  --accent: oklch(0.78 0.14 82);
+  --accent-foreground: oklch(0.14 0.03 25);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0.14 82);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0.01em; }
+}
+
+@utility text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-hero-gradient {
+  background: var(--gradient-hero);
+}
+
+@utility bg-gold-gradient {
+  background: var(--gradient-gold);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility shadow-gold {
+  box-shadow: var(--shadow-gold);
+}
+
+@utility shadow-lift {
+  box-shadow: var(--shadow-lift);
+}
+
+@utility pitch-lines {
+  background-image:
+    linear-gradient(oklch(1 0 0 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 oklch(0.78 0.14 82 / 0.6); }
+  100% { box-shadow: 0 0 0 24px oklch(0.78 0.14 82 / 0); }
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes flagWave {
+  0% {
+    transform: perspective(600px) rotateY(0deg) skewY(0deg) scaleY(1);
+    clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%);
+  }
+  25% {
+    transform: perspective(600px) rotateY(-6deg) skewY(-1.5deg) scaleY(1.02);
+    clip-path: polygon(0 0, 100% 6%, 100% 94%, 0 100%);
+  }
+  50% {
+    transform: perspective(600px) rotateY(0deg) skewY(0.5deg) scaleY(1);
+    clip-path: polygon(0 2%, 100% 0, 100% 100%, 0 98%);
+  }
+  75% {
+    transform: perspective(600px) rotateY(6deg) skewY(1.5deg) scaleY(0.98);
+    clip-path: polygon(0 6%, 100% 0, 100% 100%, 0 94%);
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) skewY(0deg) scaleY(1);
+    clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%);
+  }
+}
+
+
+@utility animate-float {
+  animation: float-slow 6s ease-in-out infinite;
+}
+@utility animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+@utility animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+@utility shine-text {
+  background: linear-gradient(90deg, var(--gold-soft) 0%, oklch(1 0 0) 45%, var(--gold) 55%, var(--gold-soft) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 4s linear infinite;
+}
