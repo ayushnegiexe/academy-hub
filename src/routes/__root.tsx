@@ -7,10 +7,9 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site/site-header";
@@ -32,23 +31,22 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+
+  // For your resume: Demonstrates you know how to handle production errors
+  console.error("Application Error Boundary:", error);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Refresh, or head back home.</p>
+        <p className="mt-2 text-sm text-muted-foreground">The match has been paused due to a technical error.</p>
         <div className="mt-6 flex justify-center gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}
             className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110"
           >Try again</button>
-          <a href="/" className="rounded-full border border-input bg-background px-5 py-2 text-sm font-semibold hover:bg-accent hover:text-accent-foreground">Go home</a>
+          <Link to="/" className="rounded-full border border-input bg-background px-5 py-2 text-sm font-semibold hover:bg-accent hover:text-accent-foreground">Go home</Link>
         </div>
       </div>
     </div>
@@ -61,7 +59,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Devsheel Football Academy — Where champions are forged" },
-      { name: "description", content: "Devsheel Football Academy trains ambitious footballers ages 6–21 with elite coaching, sports science, and pathway partnerships." },
+      { name: "description", content: "Devsheel Football Academy trains ambitious footballers ages 6–21 with elite coaching and sports science." },
       { name: "author", content: "Devsheel Football Academy" },
       { property: "og:title", content: "Devsheel Football Academy" },
       { property: "og:description", content: "Elite football coaching, sports science, and pro-pathway support." },
