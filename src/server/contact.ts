@@ -67,7 +67,9 @@ export async function submitContactForm(data: ContactSubmission) {
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables.");
+    throw new Error(
+      "Supabase environment variables are not configured in this deployment. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+    );
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/contact_inquiries`, {
