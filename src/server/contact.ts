@@ -48,8 +48,8 @@ export async function submitContactForm(data: ContactSubmission) {
     throw new Error("Message must be at least 10 characters long.");
   }
 
-  if (phone && !/^[0-9+()\-\s]{7,30}$/.test(phone)) {
-    throw new Error("Please enter a valid phone number.");
+  if (phone && !/^\+\d{1,3}\d{10}$/.test(phone)) {
+    throw new Error("Please enter a valid 10-digit phone number.");
   }
 
   if (!allowedInterestGroups.has(interestGroup)) {

@@ -11,6 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { submitContactForm } from "@/server/contact";
 
+const countryCodes = [
+  { value: "+91", label: "India (+91)" },
+  { value: "+1", label: "US / Canada (+1)" },
+  { value: "+44", label: "UK (+44)" },
+  { value: "+61", label: "Australia (+61)" },
+  { value: "+971", label: "UAE (+971)" },
+];
+
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
@@ -24,6 +32,7 @@ export const Route = createFileRoute("/contact")({
 function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [topic, setTopic] = useState<string>("");
+  const [countryCode, setCountryCode] = useState("+91");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,12 +42,13 @@ function ContactPage() {
     const firstName = String(formData.get("first") ?? "").trim();
     const lastName = String(formData.get("last") ?? "").trim();
     const full_name = `${firstName} ${lastName}`.trim();
+    const phoneNumber = String(formData.get("phone") ?? "").trim();
 
     try {
       await submitContactForm({
         full_name,
         email: String(formData.get("email") ?? "").trim(),
-        phone: String(formData.get("phone") ?? "").trim(),
+        phone: phoneNumber ? `${countryCode}${phoneNumber}` : "",
         message: String(formData.get("msg") ?? "").trim(),
         interest_group: topic || "other",
       });
@@ -49,6 +59,7 @@ function ContactPage() {
       
       (e.target as HTMLFormElement).reset();
       setTopic("");
+      setCountryCode("+91");
     } catch (error) {
       console.error(error);
       toast.error("Failed to send message", {
@@ -97,14 +108,31 @@ function ContactPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    name="phone"
-                    id="phone"
-                    type="tel"
-                    pattern="[0-9+()\-\s]{7,30}"
-                    title="Enter a valid phone number."
-                    disabled={isSubmitting}
-                  />
+                  <div className="flex gap-2">
+                    <Select value={countryCode} onValueChange={setCountryCode} disabled={isSubmitting}>
+                      <SelectTrigger className="w-[132px] shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countryCodes.map((country) => (
+                          <SelectItem key={country.value} value={country.value}>
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      name="phone"
+                      id="phone"
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      minLength={10}
+                      maxLength={10}
+                      title="Enter a 10-digit phone number."
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
               </div>
 
