@@ -4,7 +4,7 @@ export type ContactSubmission = {
   full_name: string;
   email: string;
   phone?: string;
-  message: string;
+  message?: string;
   interest_group?: string;
 };
 
@@ -31,8 +31,8 @@ export async function submitContactForm(data: ContactSubmission) {
   const phone = data.phone ? normalizeText(data.phone, 30) : "";
   const interestGroup = normalizeText(data.interest_group, 50) || "other";
 
-  if (!fullName || !email || !message) {
-    throw new Error("Missing required contact form fields.");
+  if (!fullName || !email) {
+    throw new Error("Name and email are required.");
   }
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,10 +42,6 @@ export async function submitContactForm(data: ContactSubmission) {
 
   if (fullName.length < 2) {
     throw new Error("Please enter your full name.");
-  }
-
-  if (message.length < 10) {
-    throw new Error("Message must be at least 10 characters long.");
   }
 
   if (phone && !/^\+\d{1,3}\d{10}$/.test(phone)) {

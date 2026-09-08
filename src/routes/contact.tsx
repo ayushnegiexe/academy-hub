@@ -151,14 +151,12 @@ function ContactPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="msg">Message</Label>
+                <Label htmlFor="msg">Message <span className="text-muted-foreground">(optional)</span></Label>
                 <Textarea 
                   name="msg" 
                   id="msg" 
                   rows={5} 
-                  required 
                   disabled={isSubmitting}
-                  minLength={10}
                   placeholder="Tell us a little about the player, age group, and what you're looking for..."
                 />
               </div>
