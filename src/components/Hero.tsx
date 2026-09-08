@@ -16,7 +16,7 @@ export const Hero = () => {
 
       {/* 2. The Main Video */}
       <div className="absolute inset-0 z-10 flex items-center justify-center">
-        <video autoPlay loop muted playsInline className="h-full w-auto max-w-none shadow-2xl">
+        <video autoPlay loop muted playsInline className="h-full w-auto max-w-full shadow-2xl">
           <source src="/academy-hero.mp4" type="video/mp4" />
         </video>
       </div>

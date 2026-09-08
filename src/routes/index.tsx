@@ -87,7 +87,7 @@ function Hero() {
           muted
           playsInline
           preload="auto"
-          className="absolute inset-0 mx-auto h-full w-auto object-contain shadow-[0_0_80px_rgba(0,0,0,0.6)]"
+          className="absolute inset-0 mx-auto h-full w-auto max-w-full object-contain shadow-[0_0_80px_rgba(0,0,0,0.6)]"
         >
           <source src="/academy-hero.mp4" type="video/mp4" />
         </video>

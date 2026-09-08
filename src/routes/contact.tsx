@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
-import { useState } from "react"; // Added for state management
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { submitContactForm } from "@/server/contact"; // Import your backend function
+import { submitContactForm } from "@/server/contact";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -40,7 +40,7 @@ function ContactPage() {
         email: String(formData.get("email") ?? "").trim(),
         phone: String(formData.get("phone") ?? "").trim(),
         message: String(formData.get("msg") ?? "").trim(),
-        interest_group: topic || "Not specified",
+        interest_group: topic || "other",
       });
 
       toast.success("Message received!", {
@@ -52,7 +52,7 @@ function ContactPage() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to send message", {
-        description: "Please check your connection and try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -97,7 +97,14 @@ function ContactPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input name="phone" id="phone" type="tel" disabled={isSubmitting} />
+                  <Input
+                    name="phone"
+                    id="phone"
+                    type="tel"
+                    pattern="[0-9+()\-\s]{7,30}"
+                    title="Enter a valid phone number."
+                    disabled={isSubmitting}
+                  />
                 </div>
               </div>
 
@@ -123,7 +130,8 @@ function ContactPage() {
                   rows={5} 
                   required 
                   disabled={isSubmitting}
-                  placeholder="Tell us a little about the player, age group, and what you're looking for..." 
+                  minLength={10}
+                  placeholder="Tell us a little about the player, age group, and what you're looking for..."
                 />
               </div>
 
@@ -143,9 +151,7 @@ function ContactPage() {
           </CardContent>
         </Card>
 
-        {/* ... The rest of your Visit Us / Map cards remain the same ... */}
         <div className="space-y-5">
-           {/* (Keep your Visit us, Hours, and Map cards here) */}
         </div>
       </section>
     </>

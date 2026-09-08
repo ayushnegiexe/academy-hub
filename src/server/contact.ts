@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/subpabase";
+
 export type ContactSubmission = {
   full_name: string;
   email: string;
@@ -21,9 +23,6 @@ function normalizeText(value: string | undefined, maxLength: number) {
   }
   return text;
 }
-
-import { addDoc, collection, getFirestore } from "firebase/firestore";
-import { app } from "@/lib/firebase";
 
 export async function submitContactForm(data: ContactSubmission) {
   const fullName = normalizeText(data.full_name, 100);
@@ -66,8 +65,15 @@ export async function submitContactForm(data: ContactSubmission) {
     created_at: new Date().toISOString(),
   };
 
-  const db = getFirestore(app);
-  await addDoc(collection(db, "contact_inquiries"), payload);
+  if (!supabase) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { error } = await supabase.from("contact_inquiries").insert(payload);
+  if (error) {
+    console.error("Supabase insert failed:", error);
+    throw new Error("Failed to save contact submission.");
+  }
 
   return {
     success: true,
