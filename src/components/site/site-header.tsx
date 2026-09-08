@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight, Instagram, Mail, Phone } from "lucide-react";
 import logo from "@/assets/devsheel-logo-light.png";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -61,6 +61,34 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-4 lg:flex">
+          <div className="flex items-center gap-2 border-r border-white/15 pr-4">
+            <a
+              href="https://www.instagram.com/devsheel_football_academy/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Devsheel Football Academy on Instagram"
+              title="Instagram"
+              className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-gold"
+            >
+              <Instagram className="h-4 w-4" />
+            </a>
+            <a
+              href="tel:+442079460123"
+              aria-label="Call Devsheel Football Academy"
+              title="Call"
+              className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-gold"
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+            <a
+              href="mailto:hello@devsheel.fc"
+              aria-label="Email Devsheel Football Academy"
+              title="Email"
+              className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-gold"
+            >
+              <Mail className="h-4 w-4" />
+            </a>
+          </div>
           <Button
             asChild
             className="group bg-gold-gradient font-bold text-ink hover:brightness-110"
@@ -94,6 +122,31 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
+            <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-4">
+              <a
+                href="https://www.instagram.com/devsheel_football_academy/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Devsheel Football Academy on Instagram"
+                className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 hover:text-gold"
+              >
+                <Instagram className="h-4 w-4" /> Instagram
+              </a>
+              <a
+                href="tel:+442079460123"
+                aria-label="Call Devsheel Football Academy"
+                className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 hover:text-gold"
+              >
+                <Phone className="h-4 w-4" /> Call
+              </a>
+              <a
+                href="mailto:hello@devsheel.fc"
+                aria-label="Email Devsheel Football Academy"
+                className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 hover:text-gold"
+              >
+                <Mail className="h-4 w-4" /> Email
+              </a>
+            </div>
             <Button
               asChild
               className="mt-4 bg-gold-gradient py-7 text-ink font-bold uppercase tracking-widest"

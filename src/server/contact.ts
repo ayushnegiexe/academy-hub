@@ -4,7 +4,7 @@ export type ContactSubmission = {
   full_name: string;
   email: string;
   phone?: string;
-  message?: string;
+  address?: string;
   interest_group?: string;
 };
 
@@ -27,7 +27,7 @@ function normalizeText(value: string | undefined, maxLength: number) {
 export async function submitContactForm(data: ContactSubmission) {
   const fullName = normalizeText(data.full_name, 100);
   const email = normalizeText(data.email, 255);
-  const message = normalizeText(data.message, 2000);
+  const address = normalizeText(data.address, 500);
   const phone = data.phone ? normalizeText(data.phone, 30) : "";
   const interestGroup = normalizeText(data.interest_group, 50) || "other";
 
@@ -56,7 +56,7 @@ export async function submitContactForm(data: ContactSubmission) {
     full_name: fullName,
     email,
     phone: phone || null,
-    message,
+    message: address,
     interest_group: interestGroup,
     created_at: new Date().toISOString(),
   };

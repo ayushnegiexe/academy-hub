@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Instagram, Youtube, Facebook, Twitter, MapPin, Phone, Mail } from "lucide-react";
+import { Instagram, Facebook, Twitter, MapPin, Phone, Mail } from "lucide-react";
 import logo from "@/assets/devsheel-logo-light.png";
 
 export function SiteFooter() {
@@ -15,10 +15,17 @@ export function SiteFooter() {
             on professional fundamentals.
           </p>
           <div className="mt-8 flex gap-3">
-            {[Instagram, Youtube, Facebook, Twitter].map((Icon, i) => (
+            {[
+              { Icon: Instagram, href: "https://www.instagram.com/devsheel_football_academy/", label: "Instagram" },
+              { Icon: Facebook, href: "#", label: "Facebook" },
+              { Icon: Twitter, href: "#", label: "Twitter" },
+            ].map(({ Icon, href, label }) => (
               <a
-                key={i}
-                href="#"
+                key={label}
+                href={href}
+                target={href.startsWith("http") ? "_blank" : undefined}
+                rel={href.startsWith("http") ? "noreferrer" : undefined}
+                aria-label={label}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-white transition-all hover:bg-gold hover:text-ink hover:-translate-y-1"
               >
                 <Icon className="h-5 w-5" />

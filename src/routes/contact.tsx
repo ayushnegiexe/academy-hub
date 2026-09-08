@@ -49,7 +49,7 @@ function ContactPage() {
         full_name,
         email: String(formData.get("email") ?? "").trim(),
         phone: phoneNumber ? `${countryCode}${phoneNumber}` : "",
-        message: String(formData.get("msg") ?? "").trim(),
+        address: String(formData.get("address") ?? "").trim(),
         interest_group: topic || "other",
       });
 
@@ -151,13 +151,13 @@ function ContactPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="msg">Message <span className="text-muted-foreground">(optional)</span></Label>
+                <Label htmlFor="address">Full address</Label>
                 <Textarea 
-                  name="msg" 
-                  id="msg" 
-                  rows={5} 
+                  name="address"
+                  id="address"
+                  rows={3}
                   disabled={isSubmitting}
-                  placeholder="Tell us a little about the player, age group, and what you're looking for..."
+                  placeholder="Enter your full address..."
                 />
               </div>
 
