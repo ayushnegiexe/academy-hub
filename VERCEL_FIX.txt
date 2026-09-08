@@ -1,0 +1,57 @@
+Vercel fix for the blocked JS/CSP issue
+
+1) Open your Vercel project dashboard
+2) Go to Settings > Environment Variables
+3) Add these variables:
+   - VITE_SUPABASE_URL
+   - VITE_SUPABASE_ANON_KEY
+
+   Use your real Supabase values.
+
+4) Go to Settings > Build & Development Settings
+5) Confirm these are set:
+   - Framework Preset: Vite
+   - Root Directory: . (project root)
+   - Build Command: npm run build
+   - Output Directory: dist
+
+6) Check whether you have a vercel.json file in the project root.
+   If yes, open it and remove any Content-Security-Policy header that looks like this:
+
+   {
+     "headers": [
+       {
+         "source": "/(.*)",
+         "headers": [
+           { "key": "Content-Security-Policy", "value": "script-src 'self';" }
+         ]
+       }
+     ]
+   }
+
+   Replace it with a relaxed temporary one if needed:
+
+   {
+     "headers": [
+       {
+         "source": "/(.*)",
+         "headers": [
+           {
+             "key": "Content-Security-Policy",
+             "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'self'; frame-src 'self' https://www.openstreetmap.org;"
+           }
+         ]
+       }
+     ]
+   }
+
+7) Redeploy the project in Vercel.
+8) Hard refresh the browser or open the site in an incognito window.
+9) Open DevTools > Console and check for red errors.
+
+If you still see a CSP error after this, the issue is coming from the hosting layer or a cached deployment. In that case:
+- clear the Vercel cache if available
+- redeploy again
+- check the actual response headers in DevTools > Network
+
+This file is for the Vercel deployment fix only.

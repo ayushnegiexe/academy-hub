@@ -30,7 +30,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
-  // For your resume: Demonstrates you know how to handle production errors
   console.error("Application Error Boundary:", error);
 
   return (

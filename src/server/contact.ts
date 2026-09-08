@@ -22,6 +22,9 @@ function normalizeText(value: string | undefined, maxLength: number) {
   return text;
 }
 
+import { addDoc, collection, getFirestore } from "firebase/firestore";
+import { app } from "@/lib/firebase";
+
 export async function submitContactForm(data: ContactSubmission) {
   const fullName = normalizeText(data.full_name, 100);
   const email = normalizeText(data.email, 255);
@@ -63,31 +66,8 @@ export async function submitContactForm(data: ContactSubmission) {
     created_at: new Date().toISOString(),
   };
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Supabase environment variables are not configured in this deployment. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
-    );
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/contact_inquiries`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify([payload]),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.error("Supabase insert failed:", text);
-    throw new Error("Failed to save contact submission.");
-  }
+  const db = getFirestore(app);
+  await addDoc(collection(db, "contact_inquiries"), payload);
 
   return {
     success: true,
