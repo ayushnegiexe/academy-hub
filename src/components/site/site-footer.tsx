@@ -59,7 +59,8 @@ export function SiteFooter() {
           <p className="text-xs font-black uppercase tracking-[0.25em] text-gold">Visit Us</p>
           <ul className="mt-6 space-y-5 text-sm text-white/60 font-medium">
             <li className="flex gap-4">
-              <MapPin className="h-5 w-5 shrink-0 text-gold" /> 42 Kingsway Sports Complex
+              <MapPin className="h-5 w-5 shrink-0 text-gold" />
+              <span>Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007</span>
             </li>
             <li className="flex gap-4">
               <Phone className="h-5 w-5 shrink-0 text-gold" /> +44 20 7946 0123

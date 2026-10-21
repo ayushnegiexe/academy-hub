@@ -335,7 +335,7 @@ function AboutPage() {
         </div>
       </section>
 
-      {/* ACADEMY GROUND (placeholder — content coming) */}
+      {/* ACADEMY GROUND */}
       <section id="ground" className="mx-auto max-w-7xl px-4 py-20 md:px-6 scroll-mt-24">
         <div className="grid gap-10 lg:grid-cols-3">
           <div>
@@ -346,24 +346,28 @@ function AboutPage() {
               Our own ground.
             </h2>
             <p className="mt-4 font-medium text-muted-foreground">
-              This section is reserved for the Devsheel academy ground — photos, pitch details and
-              session timings. Content coming soon.
+              Visit the Devsheel academy ground at Badowala, Premnagar Rd, Arcadia Grant, Dehradun,
+              Uttarakhand 248007. Pitch details and session timings coming soon.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
               {[
-                { icon: MapPin, label: "Location — TBA" },
-                { icon: Ruler, label: "Pitch size — TBA" },
-                { icon: Goal, label: "Goals — TBA" },
-                { icon: Clock, label: "Timings — TBA" },
-              ].map(({ icon: Icon, label }) => (
+                {
+                  icon: MapPin,
+                  label: "Location — Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007",
+                  tooltip: "The Devsheel academy ground is at Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007.",
+                },
+                { icon: Ruler, label: "Pitch size — TBA", tooltip: "Details to be confirmed." },
+                { icon: Goal, label: "Goals — TBA", tooltip: "Details to be confirmed." },
+                { icon: Clock, label: "Timings — TBA", tooltip: "Details to be confirmed." },
+              ].map(({ icon: Icon, label, tooltip }) => (
                 <Tooltip key={label}>
                   <TooltipTrigger asChild>
                     <span className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-dashed border-border bg-secondary/40 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                       <Icon className="h-3.5 w-3.5" /> {label}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>To be filled in once details are confirmed.</TooltipContent>
+                  <TooltipContent>{tooltip}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
