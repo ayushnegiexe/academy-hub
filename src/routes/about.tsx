@@ -16,10 +16,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FeatureCarousel } from "@/components/feature-carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Carousel,
@@ -102,6 +102,16 @@ const tournamentPhotos = [
   },
 ];
 
+const VALUES = [
+  { icon: Heart, title: "Passion", desc: "Love the ball. Love the process." },
+  {
+    icon: Compass,
+    title: "Discipline",
+    desc: "On time, in kit, and in effort — every session.",
+  },
+  { icon: Users, title: "Team", desc: "Respect for teammates, opponents and the game." },
+  { icon: Trophy, title: "Excellence", desc: "Chase mastery, not just the scoreline." },
+];
 
 function AboutPage() {
   return (
@@ -178,34 +188,11 @@ function AboutPage() {
             </Badge>
             <h2 className="font-display text-4xl uppercase md:text-5xl">The Devsheel Code.</h2>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Heart, t: "Passion", d: "Love the ball. Love the process." },
-              { icon: Compass, t: "Discipline", d: "On time, in kit, and in effort — every session." },
-              { icon: Users, t: "Team", d: "Respect for teammates, opponents and the game." },
-              { icon: Trophy, t: "Excellence", d: "Chase mastery, not just the scoreline." },
-            ].map(({ icon: Icon, t, d }) => (
-              <HoverCard key={t}>
-                <HoverCardTrigger asChild>
-                  <Card className="group cursor-pointer border-border transition hover:-translate-y-1 hover:shadow-lift">
-                    <CardContent className="p-6">
-                      <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <p className="mt-4 font-display text-2xl uppercase">{t}</p>
-                      <p className="mt-2 text-sm text-muted-foreground">{d}</p>
-                    </CardContent>
-                  </Card>
-                </HoverCardTrigger>
-                <HoverCardContent>
-                  <p className="text-sm">
-                    Built into every session — small daily habits that compound into{" "}
-                    <span className="font-semibold text-primary">{t.toLowerCase()}</span>.
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-            ))}
-          </div>
+          <FeatureCarousel
+            items={VALUES}
+            ariaLabel="The Devsheel Code values"
+            itemLabel="value"
+          />
         </div>
       </section>
 
