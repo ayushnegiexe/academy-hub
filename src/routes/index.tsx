@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   ArrowRight,
   Target,
   Heart,
@@ -10,10 +11,11 @@ import {
   Mail,
   Play,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
 
 // Assets
 import heroImg from "@/assets/hero-training.jpg";
@@ -65,7 +67,12 @@ function Hero() {
       {/* BACKGROUND VIDEO LAYER */}
       <div className="absolute inset-0 z-0">
         {/* Poster fallback */}
-        <img src={heroImg} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={heroImg}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
         {/* 1. Blurred Video Background (Fills screen on desktop) */}
         <video
@@ -98,7 +105,6 @@ function Hero() {
         <div className="absolute inset-0 pitch-lines opacity-20" />
       </div>
 
-
       <div className="relative z-20 mx-auto flex h-full max-w-5xl flex-col justify-center px-4 md:px-6">
         {/* HEADING */}
         <h1 className="font-display text-5xl uppercase leading-[0.95] text-white drop-shadow-[0_4px_15px_rgba(0,0,0,0.8)] md:text-7xl lg:text-8xl">
@@ -109,8 +115,8 @@ function Hero() {
 
         {/* PARAGRAPH */}
         <p className="mt-6 max-w-2xl text-lg font-medium text-white drop-shadow-[0_2px_12px_rgba(0,0,0,1)] md:text-xl">
-          A young grassroots academy built on the basics — first touch, movement and teamwork.
-          We train four age groups, one session at a time.
+          A young grassroots academy built on the basics — first touch, movement and teamwork. We
+          train four age groups, one session at a time.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -141,29 +147,123 @@ function Hero() {
 }
 
 /* ---------------- PILLARS ---------------- */
+const PILLARS = [
+  {
+    icon: Target,
+    title: "Technical",
+    desc: "Ball mastery, first touch and 1v1s built through consistent, focused repetition.",
+  },
+  {
+    icon: Zap,
+    title: "Tactical",
+    desc: "Simple, age-appropriate principles of play — positioning, decisions, and reading the game.",
+  },
+  {
+    icon: Heart,
+    title: "Physical",
+    desc: "Age-appropriate movement, coordination and conditioning — never overloaded.",
+  },
+  {
+    icon: Shield,
+    title: "Mental",
+    desc: "Confidence, focus and respect for teammates, opponents and the game itself.",
+  },
+];
+
 function Pillars() {
-  const pillars = [
-    {
-      icon: Target,
-      title: "Technical",
-      desc: "Ball mastery, first touch and 1v1s built through consistent, focused repetition.",
-    },
-    {
-      icon: Zap,
-      title: "Tactical",
-      desc: "Simple, age-appropriate principles of play — positioning, decisions, and reading the game.",
-    },
-    {
-      icon: Heart,
-      title: "Physical",
-      desc: "Age-appropriate movement, coordination and conditioning — never overloaded.",
-    },
-    {
-      icon: Shield,
-      title: "Mental",
-      desc: "Confidence, focus and respect for teammates, opponents and the game itself.",
-    },
-  ];
+  const [activePillarIndex, setActivePillarIndex] = useState(0);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(PILLARS.length);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const activeSlideRef = useRef(PILLARS.length);
+  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const centerSlide = (index: number, behavior: ScrollBehavior = "smooth") => {
+    const carousel = carouselRef.current;
+    const slide = slideRefs.current[index];
+    if (!carousel || !slide) return;
+
+    activeSlideRef.current = index;
+    setActiveSlideIndex(index);
+    setActivePillarIndex(index % PILLARS.length);
+
+    const carouselBounds = carousel.getBoundingClientRect();
+    const slideBounds = slide.getBoundingClientRect();
+    carousel.scrollTo({
+      left:
+        carousel.scrollLeft +
+        slideBounds.left -
+        carouselBounds.left +
+        slideBounds.width / 2 -
+        carousel.clientWidth / 2,
+      behavior,
+    });
+  };
+
+  const updateActivePillar = (carousel: HTMLDivElement) => {
+    if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
+    settleTimeoutRef.current = setTimeout(() => {
+      const carouselCenter = carousel.getBoundingClientRect().left + carousel.clientWidth / 2;
+      let closestIndex = activeSlideRef.current;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      slideRefs.current.forEach((slide, index) => {
+        if (!slide) return;
+        const bounds = slide.getBoundingClientRect();
+        const distance = Math.abs(bounds.left + bounds.width / 2 - carouselCenter);
+        if (distance < closestDistance) {
+          closestIndex = index;
+          closestDistance = distance;
+        }
+      });
+
+      const firstSlide = slideRefs.current[0];
+      const repeatedSlide = slideRefs.current[PILLARS.length];
+      const cycleWidth =
+        firstSlide && repeatedSlide
+          ? repeatedSlide.getBoundingClientRect().left - firstSlide.getBoundingClientRect().left
+          : 0;
+
+      if (cycleWidth > 0 && carousel.scrollLeft < cycleWidth) {
+        closestIndex += PILLARS.length;
+        carousel.scrollLeft += cycleWidth;
+      } else if (cycleWidth > 0 && carousel.scrollLeft > cycleWidth * 2) {
+        closestIndex -= PILLARS.length;
+        carousel.scrollLeft -= cycleWidth;
+      }
+
+      activeSlideRef.current = closestIndex;
+      setActiveSlideIndex(closestIndex);
+      setActivePillarIndex(closestIndex % PILLARS.length);
+    }, 320);
+  };
+
+  useEffect(() => {
+    const initialCenterTimeout = setTimeout(() => {
+      const carousel = carouselRef.current;
+      const initialSlide = slideRefs.current[PILLARS.length];
+      if (!carousel || !initialSlide) return;
+
+      activeSlideRef.current = PILLARS.length;
+      setActiveSlideIndex(PILLARS.length);
+      setActivePillarIndex(0);
+
+      const carouselBounds = carousel.getBoundingClientRect();
+      const slideBounds = initialSlide.getBoundingClientRect();
+      carousel.scrollLeft =
+        carousel.scrollLeft +
+        slideBounds.left -
+        carouselBounds.left +
+        slideBounds.width / 2 -
+        carousel.clientWidth / 2;
+    }, 50);
+
+    return () => {
+      clearTimeout(initialCenterTimeout);
+      if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
+    };
+  }, []);
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-24 md:px-6">
       <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-end">
@@ -182,28 +282,143 @@ function Pillars() {
         </p>
       </div>
 
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {pillars.map(({ icon: Icon, title, desc }) => (
-          <HoverCard key={title} openDelay={80}>
-            <HoverCardTrigger asChild>
-              <Card className="group cursor-pointer overflow-hidden border-zinc-100 transition hover:-translate-y-2 hover:shadow-xl">
-                <CardContent className="relative p-8">
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-zinc-950 text-white transition group-hover:scale-110">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="mt-5 font-display text-2xl uppercase text-zinc-950">{title}</h3>
-                  <p className="mt-2 text-sm text-zinc-500 font-medium">{desc}</p>
-                </CardContent>
-              </Card>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-72 bg-zinc-950 text-white border-zinc-800">
-              <p className="font-display text-lg uppercase text-gold">{title}</p>
-              <p className="mt-1 text-xs text-white/60">
-                Woven into every session across all four age groups.
-              </p>
-            </HoverCardContent>
-          </HoverCard>
-        ))}
+      <div
+        ref={carouselRef}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="Four pillars of player development"
+        className="mt-8 -my-10 overflow-x-auto overflow-y-hidden overscroll-x-contain py-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [scroll-behavior:auto] [touch-action:pan-x_pan-y]"
+        onScroll={(event) => updateActivePillar(event.currentTarget)}
+      >
+        <div className="flex w-max min-w-full gap-4 px-[max(0px,calc((100%_-_320px)/2))] md:gap-6">
+          {Array.from({ length: 3 }, (_, copyIndex) =>
+            PILLARS.map(({ icon: Icon, title, desc }, pillarIndex) => {
+              const index = copyIndex * PILLARS.length + pillarIndex;
+              const isFeatured = index === activeSlideIndex;
+
+              return (
+                <div
+                  key={`${copyIndex}-${title}`}
+                  ref={(element) => {
+                    slideRefs.current[index] = element;
+                  }}
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label={`${pillarIndex + 1} of ${PILLARS.length}: ${title}`}
+                  aria-hidden={copyIndex !== 1}
+                  data-pillar-slide
+                  className="w-[min(320px,75vw)] shrink-0"
+                >
+                  <button
+                    type="button"
+                    onClick={() => centerSlide(index)}
+                    aria-label={`Focus ${title} pillar`}
+                    tabIndex={copyIndex === 1 ? 0 : -1}
+                    className="block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4"
+                  >
+                    <Card
+                      className={cn(
+                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out",
+                        isFeatured
+                          ? "z-10 -translate-y-1 scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:scale-[1.03]"
+                          : "scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
+                      )}
+                    >
+                      {isFeatured && (
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-gold/10 blur-3xl"
+                        />
+                      )}
+                      <div
+                        className={cn(
+                          "absolute inset-x-6 top-0 h-1 rounded-b-full transition-colors",
+                          isFeatured ? "bg-gold" : "bg-primary/20",
+                        )}
+                      />
+                      <CardContent className="relative p-6 sm:p-7">
+                        <div
+                          className={cn(
+                            "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-300 group-hover:scale-110",
+                            isFeatured ? "bg-gold text-zinc-950" : "bg-zinc-950 text-white",
+                          )}
+                        >
+                          <Icon className="h-6 w-6" />
+                        </div>
+
+                        <h3
+                          className={cn(
+                            "mt-5 font-display text-2xl uppercase tracking-wide",
+                            isFeatured ? "text-white" : "text-zinc-950",
+                          )}
+                        >
+                          {title}
+                        </h3>
+
+                        <p
+                          className={cn(
+                            "mt-2 text-sm font-medium",
+                            isFeatured ? "text-zinc-300" : "text-zinc-500",
+                          )}
+                        >
+                          {desc}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </button>
+                </div>
+              );
+            }),
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2" aria-label="Choose a pillar">
+          {PILLARS.map(({ title }, index) => (
+            <button
+              key={title}
+              type="button"
+              aria-label={`Show ${title} pillar`}
+              aria-pressed={activePillarIndex === index}
+              onClick={() => centerSlide(PILLARS.length + index)}
+              className={cn(
+                "h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                activePillarIndex === index
+                  ? "w-8 bg-primary"
+                  : "w-2.5 bg-zinc-300 hover:bg-zinc-400",
+              )}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <p className="hidden text-sm font-semibold text-zinc-500 sm:block" aria-live="polite">
+            <span className="text-zinc-950">{PILLARS[activePillarIndex].title}</span>
+            <span className="mx-2 text-zinc-300">/</span>
+            {`0${activePillarIndex + 1} / 0${PILLARS.length}`}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Previous pillar"
+            onClick={() => centerSlide(activeSlideRef.current - 1)}
+            className="h-11 w-11 rounded-full"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Next pillar"
+            onClick={() => centerSlide(activeSlideRef.current + 1)}
+            className="h-11 w-11 rounded-full"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </section>
   );
@@ -327,7 +542,8 @@ function TheCoach() {
             <span className="text-primary">Every session.</span>
           </h2>
           <p className="mt-6 text-lg font-medium text-zinc-500 leading-relaxed">
-            Run personally by the founder. Every player is seen and every session is led with intent.
+            Run personally by the founder. Every player is seen and every session is led with
+            intent.
           </p>
           <Button
             asChild
@@ -434,7 +650,6 @@ function SoldierTribute() {
                   </p>
                 ))}
               </div>
-
             ))}
           </div>
         </div>
