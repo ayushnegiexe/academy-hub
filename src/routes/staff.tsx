@@ -63,6 +63,10 @@ type PendingConfirmation =
       changes: Partial<StudentEnrollmentEdit>;
     }
   | {
+      kind: "trial-approval";
+      request: TrialRequest;
+    }
+  | {
       kind: "fee";
       enrollment: StudentEnrollment;
       status: "paid" | "unpaid";
@@ -127,6 +131,26 @@ const trialStatusOptions: { value: TrialStatusFilter; label: string }[] = [
   { value: "rejected", label: "Declined" },
   { value: "enrolled", label: "Enrolled" },
 ];
+
+const academyAddress = "Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007";
+
+function getApprovalSmsMessage(request: TrialRequest) {
+  return (
+    `Hello ${request.guardian_name}, ${request.player_name}'s ${request.age_group} trial request ` +
+    `has been approved. Please visit Devsheel Football Academy at ${academyAddress}. ` +
+    "For session details, contact the academy admin at hello@devsheel.fc. Thank you."
+  );
+}
+
+function getApprovalSmsLink(request: TrialRequest) {
+  const phone = request.guardian_phone
+    .trim()
+    .replace(/[^\d+]/g, "")
+    .replace(/^00/, "+");
+  if (!/^\+?\d{7,15}$/.test(phone)) return null;
+
+  return `sms:${phone}&body=${encodeURIComponent(getApprovalSmsMessage(request))}`;
+}
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
@@ -325,7 +349,11 @@ function AdminPage() {
     }
   }
 
-  async function updateRequest(request: TrialRequest, status: "approved" | "rejected") {
+  async function updateRequest(
+    request: TrialRequest,
+    status: "approved" | "rejected",
+    smsWindow?: Window | null,
+  ) {
     if (!supabase) return;
     setIsSubmitting(true);
     const { error } = await supabase.rpc("review_trial_request", {
@@ -335,12 +363,30 @@ function AdminPage() {
     });
 
     if (error) {
+      smsWindow?.close();
       console.error("Could not update trial request:", error);
       toast.error("Could not update request. Please refresh and try again.");
     } else {
-      toast.success(status === "approved" ? "Trial approved" : "Trial declined");
       setPendingConfirmation(null);
-      await refreshRequests();
+      if (status === "approved") {
+        await refreshRequests();
+        const smsLink = getApprovalSmsLink(request);
+        if (smsWindow && smsLink) {
+          smsWindow.location.href = smsLink;
+          toast.success("Trial approved. Tap Send in Messages to send the text.");
+        } else if (smsLink) {
+          toast.warning(
+            "Trial approved. Use the approval-text link on the request to open Messages.",
+          );
+        } else {
+          toast.warning(
+            "Trial approved, but the guardian phone number is not valid for an SMS link.",
+          );
+        }
+      } else {
+        toast.success("Trial declined");
+        await refreshRequests();
+      }
     }
     setIsSubmitting(false);
   }
@@ -364,7 +410,7 @@ function AdminPage() {
   }
 
   const refreshRequests = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase) return false;
     const { data, error } = await supabase
       .from("trial_requests")
       .select(
@@ -374,8 +420,10 @@ function AdminPage() {
     if (error) {
       console.error("Could not refresh trial requests:", error);
       toast.error("Could not refresh requests.");
+      return false;
     } else {
       setRequests((data ?? []) as TrialRequest[]);
+      return true;
     }
   }, []);
 
@@ -773,6 +821,15 @@ function AdminPage() {
                   <p className="text-sm text-muted-foreground">
                     Preferred trial: {request.preferred_trial_date || "No date selected"}
                   </p>
+                  {(request.status === "approved" || request.status === "enrolled") &&
+                    getApprovalSmsLink(request) && (
+                      <a
+                        className="inline-flex w-fit items-center rounded-md border px-3 py-2 text-sm font-semibold text-primary underline"
+                        href={getApprovalSmsLink(request) ?? undefined}
+                      >
+                        Open approval text in Messages
+                      </a>
+                    )}
                   {request.notes && <p className="whitespace-pre-wrap text-sm">{request.notes}</p>}
                   {request.staff_notes && (
                     <p className="text-sm text-muted-foreground">
@@ -798,7 +855,7 @@ function AdminPage() {
                     <div className="flex gap-2">
                       <Button
                         disabled={isSubmitting}
-                        onClick={() => void updateRequest(request, "approved")}
+                        onClick={() => setPendingConfirmation({ kind: "trial-approval", request })}
                       >
                         Approve
                       </Button>
@@ -1366,20 +1423,24 @@ function AdminPage() {
             <AlertDialogTitle>
               {pendingConfirmation?.kind === "fee"
                 ? `Mark fee ${pendingConfirmation.status}?`
-                : pendingConfirmation?.kind === "trial-review"
-                  ? "Confirm declining this trial?"
-                  : pendingConfirmation?.kind === "enrollment"
-                    ? "Confirm student enrollment?"
-                    : "Confirm student profile changes"}
+                : pendingConfirmation?.kind === "trial-approval"
+                  ? "Approve trial and prepare SMS?"
+                  : pendingConfirmation?.kind === "trial-review"
+                    ? "Confirm declining this trial?"
+                    : pendingConfirmation?.kind === "enrollment"
+                      ? "Confirm student enrollment?"
+                      : "Confirm student profile changes"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingConfirmation?.kind === "fee"
                 ? `Confirm marking ${pendingConfirmation.enrollment.player_name}'s ${new Date(`${pendingConfirmation.billingMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })} fee as ${pendingConfirmation.status}.`
-                : pendingConfirmation?.kind === "trial-review"
-                  ? `Decline the trial request for ${pendingConfirmation.request.player_name}? This cannot be undone here.`
-                  : pendingConfirmation?.kind === "enrollment"
-                    ? `Enroll ${pendingConfirmation.request.player_name} in ${pendingConfirmation.request.age_group} starting ${formatAuditValue("start_date", pendingConfirmation.startDate)}?`
-                    : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
+                : pendingConfirmation?.kind === "trial-approval"
+                  ? `Approving ${pendingConfirmation.request.player_name}'s trial will open a prefilled text to ${pendingConfirmation.request.guardian_phone}. Review it and press Send in your Messages app.`
+                  : pendingConfirmation?.kind === "trial-review"
+                    ? `Decline the trial request for ${pendingConfirmation.request.player_name}? This cannot be undone here.`
+                    : pendingConfirmation?.kind === "enrollment"
+                      ? `Enroll ${pendingConfirmation.request.player_name} in ${pendingConfirmation.request.age_group} starting ${formatAuditValue("start_date", pendingConfirmation.startDate)}?`
+                      : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {pendingConfirmation?.kind === "student" && (
@@ -1406,6 +1467,12 @@ function AdminPage() {
                 event.preventDefault();
                 if (pendingConfirmation?.kind === "student") {
                   void updateStudent(pendingConfirmation.enrollment, pendingConfirmation.changes);
+                } else if (pendingConfirmation?.kind === "trial-approval") {
+                  const smsWindow = getApprovalSmsLink(pendingConfirmation.request)
+                    ? window.open("about:blank", "_blank")
+                    : null;
+                  if (smsWindow) smsWindow.opener = null;
+                  void updateRequest(pendingConfirmation.request, "approved", smsWindow);
                 } else if (pendingConfirmation?.kind === "fee") {
                   void updateMonthlyFee(
                     pendingConfirmation.enrollment,
@@ -1423,11 +1490,13 @@ function AdminPage() {
                 ? "Updating..."
                 : pendingConfirmation?.kind === "fee"
                   ? `Yes, mark ${pendingConfirmation.status}`
-                  : pendingConfirmation?.kind === "trial-review"
-                    ? "Yes, decline trial"
-                    : pendingConfirmation?.kind === "enrollment"
-                      ? "Yes, enroll player"
-                      : "Yes, apply changes"}
+                  : pendingConfirmation?.kind === "trial-approval"
+                    ? "Approve and open Messages"
+                    : pendingConfirmation?.kind === "trial-review"
+                      ? "Yes, decline trial"
+                      : pendingConfirmation?.kind === "enrollment"
+                        ? "Yes, enroll player"
+                        : "Yes, apply changes"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

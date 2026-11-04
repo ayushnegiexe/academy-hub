@@ -16,6 +16,14 @@ Apply
 [`supabase/migrations/20261104160000_admin_dashboard_audit_history.sql`](./supabase/migrations/20261104160000_admin_dashboard_audit_history.sql)
 to enable admin change history for student profile and monthly fee updates.
 
+## Admin approval SMS
+
+When an admin approves a trial on an iPhone, the dashboard opens Messages with the
+guardian's number and a prefilled approval text. The admin reviews it and taps Send.
+This uses the phone's built-in SMS app and requires no SMS provider, server credentials,
+or Supabase changes. If the browser blocks the handoff, use the approval-text link shown on
+the approved request.
+
 To grant admin access:
 
 1. Create an admin user in Supabase Authentication.
