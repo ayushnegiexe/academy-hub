@@ -23,16 +23,6 @@ type TrialRequest = {
   submitted_at: string;
 };
 
-type ContactInquiry = {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  interest_group: string;
-  created_at: string;
-};
-
 type StudentEnrollment = {
   id: string;
   player_name: string;
@@ -68,7 +58,6 @@ function StaffPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [requests, setRequests] = useState<TrialRequest[]>([]);
-  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [students, setStudents] = useState<StudentEnrollment[]>([]);
   const [studentEdits, setStudentEdits] = useState<Record<string, StudentEnrollmentEdit>>({});
   const [startDates, setStartDates] = useState<Record<string, string>>({});
@@ -98,7 +87,6 @@ function StaffPage() {
       setUser(session?.user ? { id: session.user.id, email: session.user.email ?? "" } : null);
       setIsStaff(false);
       setRequests([]);
-      setInquiries([]);
       setStudents([]);
       setStudentEdits({});
     });
@@ -135,17 +123,13 @@ function StaffPage() {
       }
 
       setIsStaff(true);
-      const [trialResult, inquiryResult, studentResult] = await Promise.all([
+      const [trialResult, studentResult] = await Promise.all([
         supabase!
           .from("trial_requests")
           .select(
             "id, player_name, date_of_birth, age_group, guardian_name, guardian_email, guardian_phone, preferred_trial_date, notes, status, staff_notes, submitted_at",
           )
           .order("submitted_at", { ascending: false }),
-        supabase!
-          .from("contact_inquiries")
-          .select("id, full_name, email, phone, message, interest_group, created_at")
-          .order("created_at", { ascending: false }),
         supabase!
           .from("player_enrollments")
           .select(
@@ -160,12 +144,6 @@ function StaffPage() {
         toast.error("Could not load trial requests. Please try again.");
       } else {
         setRequests((trialResult.data ?? []) as TrialRequest[]);
-      }
-      if (inquiryResult.error) {
-        console.error("Could not load contact inquiries:", inquiryResult.error);
-        toast.error("Could not load contact inquiries. Check the table and staff access policies.");
-      } else {
-        setInquiries((inquiryResult.data ?? []) as ContactInquiry[]);
       }
       if (studentResult.error) {
         console.error("Could not load enrolled students:", studentResult.error);
@@ -519,51 +497,6 @@ function StaffPage() {
             </Card>
           ))}
         </div>
-      )}
-
-      {!isLoading && isStaff && (
-        <section id="contact-inquiries" className="mt-12">
-          <h2 className="mb-5 font-display text-3xl uppercase">Contact inquiries</h2>
-          {inquiries.length === 0 ? (
-            <Card>
-              <CardContent className="p-6">No contact inquiries yet.</CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-5">
-              {inquiries.map((inquiry) => (
-                <Card key={inquiry.id}>
-                  <CardContent className="space-y-3 p-5 md:p-6">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-display text-2xl uppercase">{inquiry.full_name}</h3>
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase text-primary">
-                        {inquiry.interest_group}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Received {new Date(inquiry.created_at).toLocaleString()}
-                    </p>
-                    <p className="text-sm">
-                      <a className="underline" href={`mailto:${inquiry.email}`}>
-                        {inquiry.email}
-                      </a>
-                      {inquiry.phone && (
-                        <>
-                          {" · "}
-                          <a className="underline" href={`tel:${inquiry.phone}`}>
-                            {inquiry.phone}
-                          </a>
-                        </>
-                      )}
-                    </p>
-                    {inquiry.message && (
-                      <p className="whitespace-pre-wrap text-sm">{inquiry.message}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
       )}
 
       {!isLoading && isStaff && (
