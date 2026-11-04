@@ -74,7 +74,7 @@ type MonthlyFeeStatus = {
   paid_at: string | null;
 };
 
-type StaffUser = {
+type AdminUser = {
   id: string;
   email: string;
 };
@@ -92,14 +92,14 @@ const studentFieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
-    meta: [{ title: "Staff Dashboard — Devsheel Football Academy" }],
+    meta: [{ title: "Admin Dashboard — Devsheel Football Academy" }],
   }),
-  component: StaffPage,
+  component: AdminPage,
 });
 
-function StaffPage() {
-  const [user, setUser] = useState<StaffUser | null>(null);
-  const [isStaff, setIsStaff] = useState(false);
+function AdminPage() {
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,7 +119,7 @@ function StaffPage() {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
   const [startDates, setStartDates] = useState<Record<string, string>>({});
-  const [staffNotes, setStaffNotes] = useState<Record<string, string>>({});
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!supabase) {
@@ -132,7 +132,7 @@ function StaffPage() {
       const { data, error } = await supabase!.auth.getSession();
       if (!active) return;
       if (error) {
-        console.error("Could not check staff session:", error);
+        console.error("Could not check admin session:", error);
         toast.error("Could not check your sign-in. Please refresh and try again.");
       }
       const sessionUser = data.session?.user;
@@ -143,7 +143,7 @@ function StaffPage() {
     void checkSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ? { id: session.user.id, email: session.user.email ?? "" } : null);
-      setIsStaff(false);
+      setIsAdmin(false);
       setRequests([]);
       setStudents([]);
       setMonthlyFees({});
@@ -170,18 +170,18 @@ function StaffPage() {
 
       if (!active) return;
       if (membershipError) {
-        console.error("Could not verify staff access:", membershipError);
-        toast.error("Could not verify staff access. Please try again.");
+        console.error("Could not verify admin access:", membershipError);
+        toast.error("Could not verify admin access. Please try again.");
         setIsLoading(false);
         return;
       }
       if (!membership) {
-        setIsStaff(false);
+        setIsAdmin(false);
         setIsLoading(false);
         return;
       }
 
-      setIsStaff(true);
+      setIsAdmin(true);
       const [trialResult, studentResult] = await Promise.all([
         supabase!
           .from("trial_requests")
@@ -206,7 +206,7 @@ function StaffPage() {
       }
       if (studentResult.error) {
         console.error("Could not load enrolled students:", studentResult.error);
-        toast.error("Could not load existing students. Please check staff access policies.");
+        toast.error("Could not load existing students. Please check admin access policies.");
       } else {
         setStudents((studentResult.data ?? []) as StudentEnrollment[]);
       }
@@ -220,7 +220,7 @@ function StaffPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!supabase || !user || !isStaff) return;
+    if (!supabase || !user || !isAdmin) return;
     let active = true;
 
     async function loadMonthlyFees() {
@@ -234,7 +234,7 @@ function StaffPage() {
       if (error) {
         console.error("Could not load monthly fee statuses:", error);
         toast.error(
-          "Could not load fee statuses. Please check the fee migration and staff access.",
+          "Could not load fee statuses. Please check the fee migration and admin access.",
         );
         setMonthlyFees({});
         setMonthlyFeeLoadFailed(true);
@@ -256,7 +256,7 @@ function StaffPage() {
     return () => {
       active = false;
     };
-  }, [user, isStaff, feeMonth]);
+  }, [user, isAdmin, feeMonth]);
 
   async function signIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -264,7 +264,7 @@ function StaffPage() {
     setIsSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      console.error("Staff sign-in failed:", error);
+      console.error("Admin sign-in failed:", error);
       toast.error("Could not sign in", { description: error.message });
     }
     setIsSubmitting(false);
@@ -274,7 +274,7 @@ function StaffPage() {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Staff sign-out failed:", error);
+      console.error("Admin sign-out failed:", error);
       toast.error("Could not sign out. Please try again.");
     }
   }
@@ -285,7 +285,7 @@ function StaffPage() {
     const { error } = await supabase.rpc("review_trial_request", {
       p_trial_request_id: request.id,
       p_status: status,
-      p_staff_notes: staffNotes[request.id]?.trim() || null,
+      p_staff_notes: adminNotes[request.id]?.trim() || null,
     });
 
     if (error) {
@@ -489,7 +489,7 @@ function StaffPage() {
   }
 
   useEffect(() => {
-    if (!supabase || !user || !isStaff) return;
+    if (!supabase || !user || !isAdmin) return;
     const client = supabase;
 
     const channel = client
@@ -511,7 +511,7 @@ function StaffPage() {
     return () => {
       void client.removeChannel(channel);
     };
-  }, [user, isStaff, refreshRequests]);
+  }, [user, isAdmin, refreshRequests]);
 
   const filteredStudents = students
     .filter((student) =>
@@ -521,12 +521,12 @@ function StaffPage() {
 
   if (!supabase) {
     return (
-      <DashboardMessage message="Supabase is not configured. Set the project URL and publishable key to enable staff access." />
+      <DashboardMessage message="Supabase is not configured. Set the project URL and publishable key to enable admin access." />
     );
   }
 
   if (isChecking) {
-    return <DashboardMessage message="Checking staff sign-in..." />;
+    return <DashboardMessage message="Checking admin sign-in..." />;
   }
 
   if (!user) {
@@ -534,9 +534,9 @@ function StaffPage() {
       <section className="mx-auto max-w-md px-4 py-20 md:px-6">
         <Card>
           <CardContent className="p-6 md:p-8">
-            <h1 className="font-display text-3xl uppercase">Staff sign in</h1>
+            <h1 className="font-display text-3xl uppercase">Admin sign in</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sign in with your academy staff account.
+              Sign in with your academy admin account.
             </p>
             <form onSubmit={signIn} className="mt-6 grid gap-4">
               <div className="grid gap-2">
@@ -578,16 +578,16 @@ function StaffPage() {
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">{user.email}</p>
-          <h1 className="font-display text-4xl uppercase">Staff dashboard</h1>
+          <h1 className="font-display text-4xl uppercase">Admin dashboard</h1>
         </div>
         <Button variant="outline" onClick={signOut}>
           Sign out
         </Button>
       </div>
 
-      {!isLoading && isStaff && (
+      {!isLoading && isAdmin && (
         <nav
-          aria-label="Staff dashboard sections"
+          aria-label="Admin dashboard sections"
           className="sticky top-24 z-40 -mx-4 mb-6 flex gap-2 border-y bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6"
         >
           <a
@@ -605,17 +605,17 @@ function StaffPage() {
         </nav>
       )}
 
-      {!isLoading && isStaff && (
+      {!isLoading && isAdmin && (
         <h2 id="trial-requests" className="mb-5 scroll-mt-36 font-display text-3xl uppercase">
           Trial requests
         </h2>
       )}
       {isLoading ? (
         <p className="text-muted-foreground">Loading requests...</p>
-      ) : !isStaff ? (
+      ) : !isAdmin ? (
         <Card>
           <CardContent className="p-6">
-            This account is signed in but is not registered as academy staff.
+            This account is signed in but is not registered as an academy admin.
           </CardContent>
         </Card>
       ) : requests.length === 0 ? (
@@ -660,7 +660,7 @@ function StaffPage() {
                   {request.notes && <p className="whitespace-pre-wrap text-sm">{request.notes}</p>}
                   {request.staff_notes && (
                     <p className="text-sm text-muted-foreground">
-                      Staff note: {request.staff_notes}
+                      Admin note: {request.staff_notes}
                     </p>
                   )}
                 </div>
@@ -669,10 +669,10 @@ function StaffPage() {
                   <div className="grid content-start gap-3 md:w-72">
                     <Textarea
                       rows={2}
-                      placeholder="Staff note (optional)"
-                      value={staffNotes[request.id] ?? ""}
+                      placeholder="Admin note (optional)"
+                      value={adminNotes[request.id] ?? ""}
                       onChange={(event) =>
-                        setStaffNotes((current) => ({
+                        setAdminNotes((current) => ({
                           ...current,
                           [request.id]: event.target.value,
                         }))
@@ -723,7 +723,7 @@ function StaffPage() {
         </div>
       )}
 
-      {!isLoading && isStaff && (
+      {!isLoading && isAdmin && (
         <section id="existing-students" className="mt-12 scroll-mt-36">
           <h2 className="mb-5 font-display text-3xl uppercase">Existing students & monthly fees</h2>
           <div className="mb-5 grid gap-4 sm:grid-cols-2">
