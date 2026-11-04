@@ -67,12 +67,36 @@ type PendingConfirmation =
       enrollment: StudentEnrollment;
       status: "paid" | "unpaid";
       billingMonth: string;
+    }
+  | {
+      kind: "trial-review";
+      request: TrialRequest;
+      status: "rejected";
+    }
+  | {
+      kind: "enrollment";
+      request: TrialRequest;
+      startDate: string;
     };
 
 type MonthlyFeeStatus = {
   status: "paid" | "unpaid";
   paid_at: string | null;
 };
+
+type AcademyChange = {
+  id: string;
+  enrollment_id: string;
+  player_name: string;
+  entity_type: "student" | "monthly_fee";
+  action: "updated" | "created";
+  old_values: Record<string, string | null>;
+  new_values: Record<string, string | null>;
+  changed_by_email: string | null;
+  changed_at: string;
+};
+
+type TrialStatusFilter = "all" | TrialRequest["status"];
 
 type AdminUser = {
   id: string;
@@ -90,6 +114,20 @@ const studentFieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
   status: "Enrollment status",
 };
 
+const auditFieldLabels: Record<string, string> = {
+  ...studentFieldLabels,
+  billing_month: "Billing month",
+  paid_at: "Paid at",
+};
+
+const trialStatusOptions: { value: TrialStatusFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Declined" },
+  { value: "enrolled", label: "Enrolled" },
+];
+
 export const Route = createFileRoute("/staff")({
   head: () => ({
     meta: [{ title: "Admin Dashboard — Devsheel Football Academy" }],
@@ -106,6 +144,8 @@ function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [requests, setRequests] = useState<TrialRequest[]>([]);
+  const [trialStatusFilter, setTrialStatusFilter] = useState<TrialStatusFilter>("pending");
+  const [visibleTrialCount, setVisibleTrialCount] = useState(10);
   const [students, setStudents] = useState<StudentEnrollment[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
   const [feeMonth, setFeeMonth] = useState(() => {
@@ -115,6 +155,9 @@ function AdminPage() {
   const [monthlyFees, setMonthlyFees] = useState<Record<string, MonthlyFeeStatus>>({});
   const [areMonthlyFeesLoading, setAreMonthlyFeesLoading] = useState(false);
   const [monthlyFeeLoadFailed, setMonthlyFeeLoadFailed] = useState(false);
+  const [changeHistory, setChangeHistory] = useState<AcademyChange[]>([]);
+  const [isChangeHistoryLoading, setIsChangeHistoryLoading] = useState(false);
+  const [changeHistoryLoadFailed, setChangeHistoryLoadFailed] = useState(false);
   const [studentEdits, setStudentEdits] = useState<Record<string, StudentEnrollmentEdit>>({});
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
@@ -148,6 +191,8 @@ function AdminPage() {
       setStudents([]);
       setMonthlyFees({});
       setStudentEdits({});
+      setChangeHistory([]);
+      setPendingConfirmation(null);
     });
 
     return () => {
@@ -225,6 +270,7 @@ function AdminPage() {
 
     async function loadMonthlyFees() {
       setAreMonthlyFeesLoading(true);
+      setMonthlyFeeLoadFailed(false);
       const { data, error } = await supabase!
         .from("player_monthly_fees")
         .select("enrollment_id, status, paid_at")
@@ -293,18 +339,14 @@ function AdminPage() {
       toast.error("Could not update request. Please refresh and try again.");
     } else {
       toast.success(status === "approved" ? "Trial approved" : "Trial declined");
+      setPendingConfirmation(null);
       await refreshRequests();
     }
     setIsSubmitting(false);
   }
 
-  async function enrollPlayer(request: TrialRequest) {
+  async function enrollPlayer(request: TrialRequest, startDate: string) {
     if (!supabase) return;
-    const startDate = startDates[request.id];
-    if (!startDate) {
-      toast.error("Choose an enrollment start date first.");
-      return;
-    }
     setIsSubmitting(true);
     const { error } = await supabase.rpc("enroll_approved_trial", {
       p_trial_request_id: request.id,
@@ -315,7 +357,8 @@ function AdminPage() {
       toast.error("Could not enroll player", { description: error.message });
     } else {
       toast.success(`${request.player_name} enrolled in ${request.age_group}`);
-      await Promise.all([refreshRequests(), refreshStudents()]);
+      setPendingConfirmation(null);
+      await Promise.all([refreshRequests(), refreshStudents(), refreshChangeHistory()]);
     }
     setIsSubmitting(false);
   }
@@ -351,6 +394,34 @@ function AdminPage() {
       setStudents((data ?? []) as StudentEnrollment[]);
     }
   }, []);
+
+  const refreshChangeHistory = useCallback(async () => {
+    if (!supabase) return;
+    setIsChangeHistoryLoading(true);
+    const { data, error } = await supabase
+      .from("academy_change_log")
+      .select(
+        "id, enrollment_id, player_name, entity_type, action, old_values, new_values, changed_by_email, changed_at",
+      )
+      .order("changed_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Could not load academy change history:", error);
+      toast.error("Could not load change history. Please check the audit history migration.");
+      setChangeHistory([]);
+      setChangeHistoryLoadFailed(true);
+    } else {
+      setChangeHistory((data ?? []) as AcademyChange[]);
+      setChangeHistoryLoadFailed(false);
+    }
+    setIsChangeHistoryLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    void refreshChangeHistory();
+  }, [user, isAdmin, refreshChangeHistory]);
 
   function setStudentField<K extends keyof StudentEnrollmentEdit>(
     enrollment: StudentEnrollment,
@@ -444,7 +515,7 @@ function AdminPage() {
       });
       setEditingStudentId(null);
       setPendingConfirmation(null);
-      await refreshStudents();
+      await Promise.all([refreshStudents(), refreshChangeHistory()]);
     }
     setIsSubmitting(false);
   }
@@ -484,6 +555,7 @@ function AdminPage() {
           : `${enrollment.player_name}'s fee marked unpaid`,
       );
       setPendingConfirmation(null);
+      await refreshChangeHistory();
     }
     setIsSubmitting(false);
   }
@@ -519,6 +591,20 @@ function AdminPage() {
     )
     .sort((a, b) => a.player_name.localeCompare(b.player_name, undefined, { sensitivity: "base" }));
   const activeStudents = students.filter((student) => student.status === "active");
+  const trialCounts = requests.reduce<Record<TrialStatusFilter, number>>(
+    (counts, request) => {
+      counts.all += 1;
+      counts[request.status] += 1;
+      return counts;
+    },
+    { all: 0, pending: 0, approved: 0, rejected: 0, enrolled: 0 },
+  );
+  const filteredTrialRequests = requests.filter(
+    (request) => trialStatusFilter === "all" || request.status === trialStatusFilter,
+  );
+  const visibleTrialRequests = filteredTrialRequests.slice(0, visibleTrialCount);
+  const paidFeeCount = Object.values(monthlyFees).filter((fee) => fee.status === "paid").length;
+  const unpaidFeeCount = Math.max(0, students.length - paidFeeCount);
 
   if (!supabase) {
     return (
@@ -603,6 +689,12 @@ function AdminPage() {
           >
             Existing students & fees
           </a>
+          <a
+            href="#change-history"
+            className="rounded-full border px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent"
+          >
+            Change history
+          </a>
         </nav>
       )}
 
@@ -610,6 +702,25 @@ function AdminPage() {
         <h2 id="trial-requests" className="mb-5 scroll-mt-36 font-display text-3xl uppercase">
           Trial requests
         </h2>
+      )}
+      {!isLoading && isAdmin && (
+        <div className="mb-5 flex flex-wrap gap-2" aria-label="Filter trial requests by status">
+          {trialStatusOptions.map(({ value, label }) => (
+            <Button
+              key={value}
+              type="button"
+              size="sm"
+              variant={trialStatusFilter === value ? "default" : "outline"}
+              aria-pressed={trialStatusFilter === value}
+              onClick={() => {
+                setTrialStatusFilter(value);
+                setVisibleTrialCount(10);
+              }}
+            >
+              {label} ({trialCounts[value]})
+            </Button>
+          ))}
+        </div>
       )}
       {isLoading ? (
         <p className="text-muted-foreground">Loading requests...</p>
@@ -623,9 +734,13 @@ function AdminPage() {
         <Card>
           <CardContent className="p-6">No trial requests yet.</CardContent>
         </Card>
+      ) : filteredTrialRequests.length === 0 ? (
+        <Card>
+          <CardContent className="p-6">No {trialStatusFilter} trial requests.</CardContent>
+        </Card>
       ) : (
         <div className="grid gap-5">
-          {requests.map((request) => (
+          {visibleTrialRequests.map((request) => (
             <Card key={request.id}>
               <CardContent className="grid gap-5 p-5 md:grid-cols-[1fr_auto] md:p-6">
                 <div className="space-y-3">
@@ -690,7 +805,13 @@ function AdminPage() {
                       <Button
                         variant="outline"
                         disabled={isSubmitting}
-                        onClick={() => void updateRequest(request, "rejected")}
+                        onClick={() =>
+                          setPendingConfirmation({
+                            kind: "trial-review",
+                            request,
+                            status: "rejected",
+                          })
+                        }
                       >
                         Decline
                       </Button>
@@ -713,7 +834,17 @@ function AdminPage() {
                       }
                       disabled={isSubmitting}
                     />
-                    <Button disabled={isSubmitting} onClick={() => void enrollPlayer(request)}>
+                    <Button
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        const startDate = startDates[request.id];
+                        if (!startDate) {
+                          toast.error("Choose an enrollment start date first.");
+                          return;
+                        }
+                        setPendingConfirmation({ kind: "enrollment", request, startDate });
+                      }}
+                    >
                       Enroll player
                     </Button>
                   </div>
@@ -721,6 +852,16 @@ function AdminPage() {
               </CardContent>
             </Card>
           ))}
+          {visibleTrialRequests.length < filteredTrialRequests.length && (
+            <Button
+              type="button"
+              variant="outline"
+              className="justify-self-center"
+              onClick={() => setVisibleTrialCount((count) => count + 10)}
+            >
+              Show 10 more ({filteredTrialRequests.length - visibleTrialRequests.length} remaining)
+            </Button>
+          )}
         </div>
       )}
 
@@ -770,6 +911,46 @@ function AdminPage() {
                 }}
               />
             </div>
+          </div>
+          <div
+            aria-label={`Monthly fee overview for ${feeMonth}`}
+            className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3"
+          >
+            {[
+              {
+                label: "Enrolled students",
+                value: students.length,
+              },
+              {
+                label: "Paid",
+                value: monthlyFeeLoadFailed
+                  ? "Unavailable"
+                  : areMonthlyFeesLoading
+                    ? "..."
+                    : paidFeeCount,
+              },
+              {
+                label: "Unpaid",
+                value: monthlyFeeLoadFailed
+                  ? "Unavailable"
+                  : areMonthlyFeesLoading
+                    ? "..."
+                    : unpaidFeeCount,
+              },
+            ].map(({ label, value }) => (
+              <Card key={label}>
+                <CardContent className="p-4">
+                  <p className="text-sm font-semibold text-muted-foreground">
+                    {label} ·{" "}
+                    {new Date(`${feeMonth}-01T00:00:00`).toLocaleDateString(undefined, {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <p className="mt-1 font-display text-3xl">{value}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
           {students.length === 0 ? (
             <Card>
@@ -1108,6 +1289,72 @@ function AdminPage() {
           )}
         </section>
       )}
+      {!isLoading && isAdmin && (
+        <section id="change-history" className="mt-12 scroll-mt-36">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-3xl uppercase">Change history</h2>
+              <p className="text-sm text-muted-foreground">
+                Latest 50 student and monthly fee changes, including who made them and when.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isChangeHistoryLoading}
+              onClick={() => void refreshChangeHistory()}
+            >
+              Refresh history
+            </Button>
+          </div>
+          {isChangeHistoryLoading ? (
+            <p className="text-sm text-muted-foreground">Loading change history...</p>
+          ) : changeHistoryLoadFailed ? (
+            <Card>
+              <CardContent className="p-5">
+                Change history is unavailable. Verify that the audit-history migration has been
+                applied.
+              </CardContent>
+            </Card>
+          ) : changeHistory.length === 0 ? (
+            <Card>
+              <CardContent className="p-5">No student or fee changes recorded yet.</CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {changeHistory.map((entry) => (
+                <Card key={entry.id}>
+                  <CardContent className="grid gap-2 p-4 sm:grid-cols-[1fr_auto]">
+                    <div>
+                      <p className="font-semibold">
+                        {entry.player_name} ·{" "}
+                        {entry.entity_type === "student" ? "Student profile" : "Monthly fee"}{" "}
+                        {entry.action}
+                      </p>
+                      <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
+                        {Object.entries(entry.new_values).map(([field, newValue]) => (
+                          <p key={field}>
+                            {auditFieldLabels[field] ?? field}:{" "}
+                            {entry.action === "updated"
+                              ? `${formatAuditValue(field, entry.old_values[field])} → `
+                              : ""}
+                            {formatAuditValue(field, newValue)}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground sm:text-right">
+                      <p>{entry.changed_by_email ?? "Admin"}</p>
+                      <p>{new Date(entry.changed_at).toLocaleString()}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <AlertDialog
         open={pendingConfirmation !== null}
         onOpenChange={(open) => {
@@ -1119,12 +1366,20 @@ function AdminPage() {
             <AlertDialogTitle>
               {pendingConfirmation?.kind === "fee"
                 ? `Mark fee ${pendingConfirmation.status}?`
-                : "Confirm student profile changes"}
+                : pendingConfirmation?.kind === "trial-review"
+                  ? "Confirm declining this trial?"
+                  : pendingConfirmation?.kind === "enrollment"
+                    ? "Confirm student enrollment?"
+                    : "Confirm student profile changes"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingConfirmation?.kind === "fee"
                 ? `Confirm marking ${pendingConfirmation.enrollment.player_name}'s ${new Date(`${pendingConfirmation.billingMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })} fee as ${pendingConfirmation.status}.`
-                : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
+                : pendingConfirmation?.kind === "trial-review"
+                  ? `Decline the trial request for ${pendingConfirmation.request.player_name}? This cannot be undone here.`
+                  : pendingConfirmation?.kind === "enrollment"
+                    ? `Enroll ${pendingConfirmation.request.player_name} in ${pendingConfirmation.request.age_group} starting ${formatAuditValue("start_date", pendingConfirmation.startDate)}?`
+                    : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {pendingConfirmation?.kind === "student" && (
@@ -1157,6 +1412,10 @@ function AdminPage() {
                     pendingConfirmation.status,
                     pendingConfirmation.billingMonth,
                   );
+                } else if (pendingConfirmation?.kind === "trial-review") {
+                  void updateRequest(pendingConfirmation.request, pendingConfirmation.status);
+                } else if (pendingConfirmation?.kind === "enrollment") {
+                  void enrollPlayer(pendingConfirmation.request, pendingConfirmation.startDate);
                 }
               }}
             >
@@ -1164,7 +1423,11 @@ function AdminPage() {
                 ? "Updating..."
                 : pendingConfirmation?.kind === "fee"
                   ? `Yes, mark ${pendingConfirmation.status}`
-                  : "Yes, apply changes"}
+                  : pendingConfirmation?.kind === "trial-review"
+                    ? "Yes, decline trial"
+                    : pendingConfirmation?.kind === "enrollment"
+                      ? "Yes, enroll player"
+                      : "Yes, apply changes"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1191,4 +1454,17 @@ function formatStudentFieldValue(field: keyof StudentEnrollmentEdit, value: stri
     return value === "active" ? "Active" : "Inactive";
   }
   return value;
+}
+
+function formatAuditValue(field: string, value: unknown) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (field === "billing_month" || field === "date_of_birth" || field === "start_date") {
+    return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString();
+  }
+  if (field === "paid_at") return new Date(String(value)).toLocaleString();
+  if (field === "status") {
+    const formatted = String(value);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+  return String(value);
 }
