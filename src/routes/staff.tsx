@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, X, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle2, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,19 @@ type PendingConfirmation =
       kind: "enrollment";
       request: TrialRequest;
       startDate: string;
+    }
+  | {
+      kind: "delete-trial";
+      request: TrialRequest;
+    }
+  | {
+      kind: "delete-student";
+      enrollment: StudentEnrollment;
+    }
+  | {
+      kind: "delete-fee";
+      enrollment: StudentEnrollment;
+      billingMonth: string;
     };
 
 type MonthlyFeeStatus = {
@@ -91,12 +104,12 @@ type MonthlyFeeStatus = {
 
 type AcademyChange = {
   id: string;
-  enrollment_id: string;
+  enrollment_id: string | null;
   player_name: string;
-  entity_type: "student" | "monthly_fee";
-  action: "updated" | "created";
-  old_values: Record<string, string | null>;
-  new_values: Record<string, string | null>;
+  entity_type: "student" | "monthly_fee" | "trial_request";
+  action: "updated" | "created" | "deleted";
+  old_values: Record<string, unknown>;
+  new_values: Record<string, unknown>;
   changed_by_email: string | null;
   changed_at: string;
 };
@@ -121,6 +134,12 @@ const studentFieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
 
 const auditFieldLabels: Record<string, string> = {
   ...studentFieldLabels,
+  preferred_trial_date: "Preferred trial date",
+  notes: "Guardian notes",
+  guardian_consent: "Guardian consent",
+  staff_notes: "Admin note",
+  submitted_at: "Submitted at",
+  reviewed_at: "Reviewed at",
   billing_month: "Billing month",
   paid_at: "Paid at",
 };
@@ -227,9 +246,11 @@ function AdminPage() {
   const [monthlyFees, setMonthlyFees] = useState<Record<string, MonthlyFeeStatus>>({});
   const [areMonthlyFeesLoading, setAreMonthlyFeesLoading] = useState(false);
   const [monthlyFeeLoadFailed, setMonthlyFeeLoadFailed] = useState(false);
+  const monthlyFeeRequestId = useRef(0);
   const [changeHistory, setChangeHistory] = useState<AcademyChange[]>([]);
   const [isChangeHistoryLoading, setIsChangeHistoryLoading] = useState(false);
   const [changeHistoryLoadFailed, setChangeHistoryLoadFailed] = useState(false);
+  const changeHistoryRefreshTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [studentEdits, setStudentEdits] = useState<Record<string, StudentEnrollmentEdit>>({});
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
@@ -336,46 +357,6 @@ function AdminPage() {
     };
   }, [user]);
 
-  useEffect(() => {
-    if (!supabase || !user || !isAdmin) return;
-    let active = true;
-
-    async function loadMonthlyFees() {
-      setAreMonthlyFeesLoading(true);
-      setMonthlyFeeLoadFailed(false);
-      const { data, error } = await supabase!
-        .from("player_monthly_fees")
-        .select("enrollment_id, status, paid_at")
-        .eq("billing_month", `${feeMonth}-01`);
-
-      if (!active) return;
-      if (error) {
-        console.error("Could not load monthly fee statuses:", error);
-        toast.error(
-          "Could not load fee statuses. Please check the fee migration and admin access.",
-        );
-        setMonthlyFees({});
-        setMonthlyFeeLoadFailed(true);
-      } else {
-        setMonthlyFees(
-          Object.fromEntries(
-            (data ?? []).map((fee) => [
-              fee.enrollment_id,
-              { status: fee.status, paid_at: fee.paid_at },
-            ]),
-          ),
-        );
-        setMonthlyFeeLoadFailed(false);
-      }
-      setAreMonthlyFeesLoading(false);
-    }
-
-    void loadMonthlyFees();
-    return () => {
-      active = false;
-    };
-  }, [user, isAdmin, feeMonth]);
-
   async function signIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase) return;
@@ -417,7 +398,7 @@ function AdminPage() {
     } else {
       setPendingConfirmation(null);
       if (status === "approved") {
-        await refreshRequests();
+        await Promise.all([refreshRequests(), refreshChangeHistory()]);
         const smsLink = getApprovalSmsLink(request);
         if (smsWindow && smsLink) {
           smsWindow.location.href = smsLink;
@@ -429,7 +410,7 @@ function AdminPage() {
         }
       } else {
         showTrialReviewToast("rejected", request.player_name, "unavailable");
-        await refreshRequests();
+        await Promise.all([refreshRequests(), refreshChangeHistory()]);
       }
     }
     setIsSubmitting(false);
@@ -486,6 +467,44 @@ function AdminPage() {
       setStudents((data ?? []) as StudentEnrollment[]);
     }
   }, []);
+
+  const refreshMonthlyFees = useCallback(async () => {
+    if (!supabase) return;
+    const requestId = ++monthlyFeeRequestId.current;
+    setAreMonthlyFeesLoading(true);
+    setMonthlyFeeLoadFailed(false);
+    const { data, error } = await supabase
+      .from("player_monthly_fees")
+      .select("enrollment_id, status, paid_at")
+      .eq("billing_month", `${feeMonth}-01`);
+
+    if (requestId !== monthlyFeeRequestId.current) return;
+    if (error) {
+      console.error("Could not load monthly fee statuses:", error);
+      toast.error("Could not load fee statuses. Please check the fee migration and admin access.");
+      setMonthlyFees({});
+      setMonthlyFeeLoadFailed(true);
+    } else {
+      setMonthlyFees(
+        Object.fromEntries(
+          (data ?? []).map((fee) => [
+            fee.enrollment_id,
+            { status: fee.status, paid_at: fee.paid_at },
+          ]),
+        ),
+      );
+      setMonthlyFeeLoadFailed(false);
+    }
+    setAreMonthlyFeesLoading(false);
+  }, [feeMonth]);
+
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    void refreshMonthlyFees();
+    return () => {
+      monthlyFeeRequestId.current += 1;
+    };
+  }, [user, isAdmin, refreshMonthlyFees]);
 
   const refreshChangeHistory = useCallback(async () => {
     if (!supabase) return;
@@ -652,17 +671,118 @@ function AdminPage() {
     setIsSubmitting(false);
   }
 
+  async function deleteTrialRequest(request: TrialRequest) {
+    if (!supabase) return;
+    setIsSubmitting(true);
+    const { data, error } = await supabase
+      .from("trial_requests")
+      .delete()
+      .eq("id", request.id)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("Could not delete trial request:", error);
+      toast.error("Could not delete the trial request. Please try again.");
+    } else if (!data) {
+      toast.info("This trial request was already removed. The dashboard has been refreshed.");
+      setPendingConfirmation(null);
+      await Promise.all([
+        refreshRequests(),
+        refreshStudents(),
+        refreshMonthlyFees(),
+        refreshChangeHistory(),
+      ]);
+    } else {
+      toast.success(
+        request.status === "enrolled"
+          ? `${request.player_name}'s trial, enrollment, and fee records were deleted`
+          : `${request.player_name}'s trial request was deleted`,
+      );
+      setPendingConfirmation(null);
+      await Promise.all([
+        refreshRequests(),
+        refreshStudents(),
+        refreshMonthlyFees(),
+        refreshChangeHistory(),
+      ]);
+    }
+    setIsSubmitting(false);
+  }
+
+  async function deleteStudent(enrollment: StudentEnrollment) {
+    if (!supabase) return;
+    setIsSubmitting(true);
+    const { data, error } = await supabase
+      .from("player_enrollments")
+      .delete()
+      .eq("id", enrollment.id)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("Could not delete enrolled student:", error);
+      toast.error("Could not delete the student record. Please try again.");
+    } else if (!data) {
+      toast.info("This student was already removed. The dashboard has been refreshed.");
+      setPendingConfirmation(null);
+      await Promise.all([refreshStudents(), refreshMonthlyFees(), refreshChangeHistory()]);
+    } else {
+      toast.success(`${enrollment.player_name}'s enrollment and fee records were deleted`);
+      setPendingConfirmation(null);
+      await Promise.all([refreshStudents(), refreshMonthlyFees(), refreshChangeHistory()]);
+    }
+    setIsSubmitting(false);
+  }
+
+  async function deleteMonthlyFee(enrollment: StudentEnrollment, billingMonth: string) {
+    if (!supabase) return;
+    setIsSubmitting(true);
+    const { data, error } = await supabase
+      .from("player_monthly_fees")
+      .delete()
+      .eq("enrollment_id", enrollment.id)
+      .eq("billing_month", `${billingMonth}-01`)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("Could not delete monthly fee record:", error);
+      toast.error("Could not delete the fee record. Please try again.");
+    } else if (!data) {
+      toast.info("This fee record was already removed. The dashboard has been refreshed.");
+      setPendingConfirmation(null);
+      await Promise.all([refreshMonthlyFees(), refreshChangeHistory()]);
+    } else {
+      setMonthlyFees((current) => {
+        const next = { ...current };
+        delete next[enrollment.id];
+        return next;
+      });
+      toast.success(`${enrollment.player_name}'s fee record was deleted`);
+      setPendingConfirmation(null);
+      await refreshChangeHistory();
+    }
+    setIsSubmitting(false);
+  }
+
   useEffect(() => {
     if (!supabase || !user || !isAdmin) return;
     const client = supabase;
 
     const channel = client
       .channel("staff-trial-request-inserts")
+      .on("postgres_changes", { event: "*", schema: "public", table: "trial_requests" }, () => {
+        void refreshRequests();
+        void refreshStudents();
+      })
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "trial_requests" },
+        { event: "INSERT", schema: "public", table: "academy_change_log" },
         () => {
-          void refreshRequests();
+          if (changeHistoryRefreshTimeout.current !== null) {
+            clearTimeout(changeHistoryRefreshTimeout.current);
+          }
+          changeHistoryRefreshTimeout.current = setTimeout(() => {
+            void refreshChangeHistory();
+          }, 100);
         },
       )
       .subscribe((status) => {
@@ -673,9 +793,12 @@ function AdminPage() {
       });
 
     return () => {
+      if (changeHistoryRefreshTimeout.current !== null) {
+        clearTimeout(changeHistoryRefreshTimeout.current);
+      }
       void client.removeChannel(channel);
     };
-  }, [user, isAdmin, refreshRequests]);
+  }, [user, isAdmin, refreshRequests, refreshStudents, refreshChangeHistory]);
 
   const filteredStudents = students
     .filter((student) =>
@@ -950,6 +1073,16 @@ function AdminPage() {
                     </Button>
                   </div>
                 )}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="md:justify-self-end"
+                  disabled={isSubmitting}
+                  onClick={() => setPendingConfirmation({ kind: "delete-trial", request })}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete request
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -1100,14 +1233,30 @@ function AdminPage() {
                                     · {student.status === "active" ? "Active" : "Inactive"}
                                   </p>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  disabled={isSubmitting}
-                                  onClick={() => openStudentEditor(student)}
-                                >
-                                  Make changes
-                                </Button>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={isSubmitting}
+                                    onClick={() => openStudentEditor(student)}
+                                  >
+                                    Make changes
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    disabled={isSubmitting}
+                                    onClick={() =>
+                                      setPendingConfirmation({
+                                        kind: "delete-student",
+                                        enrollment: student,
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete student
+                                  </Button>
+                                </div>
                               </div>
                               <Dialog
                                 open={editingStudentId === student.id}
@@ -1358,25 +1507,43 @@ function AdminPage() {
                                     </p>
                                   )}
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant={isFeePaid ? "outline" : "default"}
-                                  disabled={
-                                    isSubmitting || areMonthlyFeesLoading || monthlyFeeLoadFailed
-                                  }
-                                  onClick={() =>
-                                    setPendingConfirmation({
-                                      kind: "fee",
-                                      enrollment: student,
-                                      status: isFeePaid ? "unpaid" : "paid",
-                                      billingMonth: feeMonth,
-                                    })
-                                  }
-                                >
-                                  {monthlyFeeLoadFailed
-                                    ? "Unavailable"
-                                    : `Mark ${isFeePaid ? "unpaid" : "paid"}`}
-                                </Button>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={isFeePaid ? "outline" : "default"}
+                                    disabled={
+                                      isSubmitting || areMonthlyFeesLoading || monthlyFeeLoadFailed
+                                    }
+                                    onClick={() =>
+                                      setPendingConfirmation({
+                                        kind: "fee",
+                                        enrollment: student,
+                                        status: isFeePaid ? "unpaid" : "paid",
+                                        billingMonth: feeMonth,
+                                      })
+                                    }
+                                  >
+                                    {monthlyFeeLoadFailed
+                                      ? "Unavailable"
+                                      : `Mark ${isFeePaid ? "unpaid" : "paid"}`}
+                                  </Button>
+                                  {fee && (
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      disabled={isSubmitting || areMonthlyFeesLoading}
+                                      onClick={() =>
+                                        setPendingConfirmation({
+                                          kind: "delete-fee",
+                                          enrollment: student,
+                                          billingMonth: feeMonth,
+                                        })
+                                      }
+                                    >
+                                      Delete fee record
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -1396,7 +1563,8 @@ function AdminPage() {
             <div>
               <h2 className="font-display text-3xl uppercase">Change history</h2>
               <p className="text-sm text-muted-foreground">
-                Latest 50 student and monthly fee changes, including who made them and when.
+                Latest 50 trial, student, and fee changes, including deletions, who made them, and
+                when.
               </p>
             </div>
             <Button
@@ -1420,7 +1588,7 @@ function AdminPage() {
             </Card>
           ) : changeHistory.length === 0 ? (
             <Card>
-              <CardContent className="p-5">No student or fee changes recorded yet.</CardContent>
+              <CardContent className="p-5">No academy changes recorded yet.</CardContent>
             </Card>
           ) : (
             <div className="grid gap-3">
@@ -1430,11 +1598,17 @@ function AdminPage() {
                     <div>
                       <p className="font-semibold">
                         {entry.player_name} ·{" "}
-                        {entry.entity_type === "student" ? "Student profile" : "Monthly fee"}{" "}
+                        {entry.entity_type === "student"
+                          ? "Student profile"
+                          : entry.entity_type === "trial_request"
+                            ? "Trial request"
+                            : "Monthly fee"}{" "}
                         {entry.action}
                       </p>
                       <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
-                        {Object.entries(entry.new_values).map(([field, newValue]) => (
+                        {Object.entries(
+                          entry.action === "deleted" ? entry.old_values : entry.new_values,
+                        ).map(([field, newValue]) => (
                           <p key={field}>
                             {auditFieldLabels[field] ?? field}:{" "}
                             {entry.action === "updated"
@@ -1467,24 +1641,38 @@ function AdminPage() {
             <AlertDialogTitle>
               {pendingConfirmation?.kind === "fee"
                 ? `Mark fee ${pendingConfirmation.status}?`
-                : pendingConfirmation?.kind === "trial-approval"
-                  ? "Approve trial and prepare SMS?"
-                  : pendingConfirmation?.kind === "trial-review"
-                    ? "Confirm declining this trial?"
-                    : pendingConfirmation?.kind === "enrollment"
-                      ? "Confirm student enrollment?"
-                      : "Confirm student profile changes"}
+                : pendingConfirmation?.kind === "delete-trial"
+                  ? "Delete this trial request?"
+                  : pendingConfirmation?.kind === "delete-student"
+                    ? "Delete this student?"
+                    : pendingConfirmation?.kind === "delete-fee"
+                      ? "Delete this fee record?"
+                      : pendingConfirmation?.kind === "trial-approval"
+                        ? "Approve trial and prepare SMS?"
+                        : pendingConfirmation?.kind === "trial-review"
+                          ? "Confirm declining this trial?"
+                          : pendingConfirmation?.kind === "enrollment"
+                            ? "Confirm student enrollment?"
+                            : "Confirm student profile changes"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingConfirmation?.kind === "fee"
                 ? `Confirm marking ${pendingConfirmation.enrollment.player_name}'s ${new Date(`${pendingConfirmation.billingMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })} fee as ${pendingConfirmation.status}.`
-                : pendingConfirmation?.kind === "trial-approval"
-                  ? `Approving ${pendingConfirmation.request.player_name}'s trial will open a prefilled text to ${pendingConfirmation.request.guardian_phone}. Review it and press Send in your Messages app.`
-                  : pendingConfirmation?.kind === "trial-review"
-                    ? `Decline the trial request for ${pendingConfirmation.request.player_name}? This cannot be undone here.`
-                    : pendingConfirmation?.kind === "enrollment"
-                      ? `Enroll ${pendingConfirmation.request.player_name} in ${pendingConfirmation.request.age_group} starting ${formatAuditValue("start_date", pendingConfirmation.startDate)}?`
-                      : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
+                : pendingConfirmation?.kind === "delete-trial"
+                  ? pendingConfirmation.request.status === "enrolled"
+                    ? `Permanently delete ${pendingConfirmation.request.player_name}'s trial request, linked student enrollment, and fee records? Each record will remain in Change history.`
+                    : `Permanently delete ${pendingConfirmation.request.player_name}'s trial request? The deletion will remain in Change history.`
+                  : pendingConfirmation?.kind === "delete-student"
+                    ? `Permanently delete ${pendingConfirmation.enrollment.player_name}'s student enrollment and fee records? The trial request will remain. Deletions will remain in Change history.`
+                    : pendingConfirmation?.kind === "delete-fee"
+                      ? `Permanently delete ${pendingConfirmation.enrollment.player_name}'s ${new Date(`${pendingConfirmation.billingMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })} fee record? The deletion will remain in Change history.`
+                      : pendingConfirmation?.kind === "trial-approval"
+                        ? `Approving ${pendingConfirmation.request.player_name}'s trial will open a prefilled text to ${pendingConfirmation.request.guardian_phone}. Review it and press Send in your Messages app.`
+                        : pendingConfirmation?.kind === "trial-review"
+                          ? `Decline the trial request for ${pendingConfirmation.request.player_name}? This cannot be undone here.`
+                          : pendingConfirmation?.kind === "enrollment"
+                            ? `Enroll ${pendingConfirmation.request.player_name} in ${pendingConfirmation.request.age_group} starting ${formatAuditValue("start_date", pendingConfirmation.startDate)}?`
+                            : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {pendingConfirmation?.kind === "student" && (
@@ -1527,6 +1715,15 @@ function AdminPage() {
                   void updateRequest(pendingConfirmation.request, pendingConfirmation.status);
                 } else if (pendingConfirmation?.kind === "enrollment") {
                   void enrollPlayer(pendingConfirmation.request, pendingConfirmation.startDate);
+                } else if (pendingConfirmation?.kind === "delete-trial") {
+                  void deleteTrialRequest(pendingConfirmation.request);
+                } else if (pendingConfirmation?.kind === "delete-student") {
+                  void deleteStudent(pendingConfirmation.enrollment);
+                } else if (pendingConfirmation?.kind === "delete-fee") {
+                  void deleteMonthlyFee(
+                    pendingConfirmation.enrollment,
+                    pendingConfirmation.billingMonth,
+                  );
                 }
               }}
             >
@@ -1540,7 +1737,9 @@ function AdminPage() {
                       ? "Yes, decline trial"
                       : pendingConfirmation?.kind === "enrollment"
                         ? "Yes, enroll player"
-                        : "Yes, apply changes"}
+                        : pendingConfirmation?.kind.startsWith("delete-")
+                          ? "Yes, delete permanently"
+                          : "Yes, apply changes"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1571,10 +1770,16 @@ function formatStudentFieldValue(field: keyof StudentEnrollmentEdit, value: stri
 
 function formatAuditValue(field: string, value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
-  if (field === "billing_month" || field === "date_of_birth" || field === "start_date") {
+  if (
+    field === "billing_month" ||
+    field === "date_of_birth" ||
+    field === "preferred_trial_date" ||
+    field === "start_date"
+  ) {
     return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString();
   }
-  if (field === "paid_at") return new Date(String(value)).toLocaleString();
+  if (field.endsWith("_at")) return new Date(String(value)).toLocaleString();
+  if (field === "guardian_consent") return value ? "Yes" : "No";
   if (field === "status") {
     const formatted = String(value);
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);

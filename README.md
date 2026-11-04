@@ -14,7 +14,11 @@ Apply
 to keep the original approval timestamp when an approved trial is enrolled.
 Apply
 [`supabase/migrations/20261104160000_admin_dashboard_audit_history.sql`](./supabase/migrations/20261104160000_admin_dashboard_audit_history.sql)
-to enable admin change history for student profile and monthly fee updates.
+to enable admin change history for student profile and monthly fee updates. Then apply
+[`supabase/migrations/20261104170000_mutable_records_immutable_history.sql`](./supabase/migrations/20261104170000_mutable_records_immutable_history.sql)
+to audit trial-request changes and deletions, allow admins to delete trial, enrollment, and fee
+records, and keep the change history read-only. Deleting an enrolled trial request also deletes its
+linked enrollment and fee records; each deletion remains in Change history.
 
 ## Admin approval SMS
 
