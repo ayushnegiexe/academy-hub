@@ -24,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/lib/subpabase";
+import { setAdminAuthRememberMe, supabase } from "@/lib/subpabase";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type TrialRequest = {
   id: string;
@@ -232,6 +233,9 @@ function AdminPage() {
   const [isChecking, setIsChecking] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSignOutConfirmationOpen, setIsSignOutConfirmationOpen] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [requests, setRequests] = useState<TrialRequest[]>([]);
@@ -256,6 +260,13 @@ function AdminPage() {
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
   const [startDates, setStartDates] = useState<Record<string, string>>({});
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setRememberMe(
+      typeof window !== "undefined" &&
+        window.localStorage.getItem("devsheel-admin-remember-me") === "true",
+    );
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -361,20 +372,37 @@ function AdminPage() {
     event.preventDefault();
     if (!supabase) return;
     setIsSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+    try {
+      setAdminAuthRememberMe(rememberMe);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("Admin sign-in failed:", error);
+        toast.error("Could not sign in", { description: error.message });
+      }
+    } catch (error) {
       console.error("Admin sign-in failed:", error);
-      toast.error("Could not sign in", { description: error.message });
+      toast.error("Could not sign in. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   }
 
   async function signOut() {
     if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    setIsSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Admin sign-out failed:", error);
+        toast.error("Could not sign out. Please try again.");
+        return;
+      }
+      setIsSignOutConfirmationOpen(false);
+    } catch (error) {
       console.error("Admin sign-out failed:", error);
       toast.error("Could not sign out. Please try again.");
+    } finally {
+      setIsSigningOut(false);
     }
   }
 
@@ -867,6 +895,17 @@ function AdminPage() {
                   disabled={isSubmitting}
                 />
               </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="remember-me" className="cursor-pointer font-normal">
+                  Remember me on this device
+                </Label>
+              </div>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
@@ -884,7 +923,7 @@ function AdminPage() {
           <p className="text-sm text-muted-foreground">{user.email}</p>
           <h1 className="font-display text-4xl uppercase">Admin dashboard</h1>
         </div>
-        <Button variant="outline" onClick={signOut}>
+        <Button variant="outline" onClick={() => setIsSignOutConfirmationOpen(true)}>
           Sign out
         </Button>
       </div>
@@ -1675,6 +1714,33 @@ function AdminPage() {
           )}
         </section>
       )}
+      <AlertDialog
+        open={isSignOutConfirmationOpen}
+        onOpenChange={(open) => {
+          if (!isSigningOut) setIsSignOutConfirmationOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of the admin dashboard?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You’ll need to sign in again to manage academy requests and students.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSigningOut}>Stay signed in</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isSigningOut}
+              onClick={(event) => {
+                event.preventDefault();
+                void signOut();
+              }}
+            >
+              {isSigningOut ? "Signing out..." : "Sign out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={pendingConfirmation !== null}
         onOpenChange={(open) => {
