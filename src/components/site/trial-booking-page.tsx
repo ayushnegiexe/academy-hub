@@ -41,7 +41,7 @@ export function TrialBookingPage() {
       if (error) throw error;
 
       toast.success("Trial request sent", {
-        description: "Our staff will review it and contact you to confirm a session.",
+        description: "Our admin team will review it and contact you to confirm a session.",
       });
       form.reset();
     } catch (error) {
@@ -66,7 +66,7 @@ export function TrialBookingPage() {
             Take your <span className="shine-text">first touch.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-white/85">
-            Tell us about your player and our staff will get in touch to arrange a trial.
+            Tell us about your player and our admin team will get in touch to arrange a trial.
           </p>
         </div>
       </section>
