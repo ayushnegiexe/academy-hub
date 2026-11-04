@@ -15,6 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/lib/subpabase";
 import { toast } from "sonner";
 
@@ -48,14 +56,18 @@ type StudentEnrollment = {
 
 type StudentEnrollmentEdit = Omit<StudentEnrollment, "id">;
 
-type PendingStudentUpdate = {
-  enrollment: StudentEnrollment;
-  changes: Partial<StudentEnrollmentEdit>;
-  field: keyof StudentEnrollmentEdit;
-  fieldLabel: string;
-  previousValue: string;
-  nextValue: string;
-};
+type PendingConfirmation =
+  | {
+      kind: "student";
+      enrollment: StudentEnrollment;
+      changes: Partial<StudentEnrollmentEdit>;
+    }
+  | {
+      kind: "fee";
+      enrollment: StudentEnrollment;
+      status: "paid" | "unpaid";
+      billingMonth: string;
+    };
 
 type MonthlyFeeStatus = {
   status: "paid" | "unpaid";
@@ -65,6 +77,17 @@ type MonthlyFeeStatus = {
 type StaffUser = {
   id: string;
   email: string;
+};
+
+const studentFieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
+  player_name: "Player name",
+  date_of_birth: "Date of birth",
+  age_group: "Age group",
+  guardian_name: "Guardian name",
+  guardian_email: "Guardian email",
+  guardian_phone: "Guardian phone",
+  start_date: "Enrollment date",
+  status: "Enrollment status",
 };
 
 export const Route = createFileRoute("/staff")({
@@ -93,9 +116,8 @@ function StaffPage() {
   const [areMonthlyFeesLoading, setAreMonthlyFeesLoading] = useState(false);
   const [monthlyFeeLoadFailed, setMonthlyFeeLoadFailed] = useState(false);
   const [studentEdits, setStudentEdits] = useState<Record<string, StudentEnrollmentEdit>>({});
-  const [pendingStudentUpdate, setPendingStudentUpdate] = useState<PendingStudentUpdate | null>(
-    null,
-  );
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
   const [startDates, setStartDates] = useState<Record<string, string>>({});
   const [staffNotes, setStaffNotes] = useState<Record<string, string>>({});
 
@@ -353,52 +375,57 @@ function StaffPage() {
     }));
   }
 
-  function requestStudentUpdate(
-    enrollment: StudentEnrollment,
-    field: keyof StudentEnrollmentEdit,
-    control: HTMLInputElement | HTMLSelectElement,
-    nextValue: string,
-  ) {
-    if (pendingStudentUpdate || isSubmitting) return;
-    if (nextValue === enrollment[field]) return;
-    if (!control.checkValidity()) {
-      control.reportValidity();
+  function openStudentEditor(student: StudentEnrollment) {
+    setStudentEdits((current) => ({
+      ...current,
+      [student.id]: {
+        player_name: student.player_name,
+        date_of_birth: student.date_of_birth,
+        age_group: student.age_group,
+        guardian_name: student.guardian_name,
+        guardian_email: student.guardian_email,
+        guardian_phone: student.guardian_phone,
+        start_date: student.start_date,
+        status: student.status,
+      },
+    }));
+    setEditingStudentId(student.id);
+  }
+
+  function discardStudentEdit(studentId: string) {
+    setStudentEdits((current) => {
+      const next = { ...current };
+      delete next[studentId];
+      return next;
+    });
+    setEditingStudentId(null);
+  }
+
+  function reviewStudentChanges(enrollment: StudentEnrollment, form: HTMLFormElement) {
+    if (!form.checkValidity()) {
+      form.reportValidity();
       return;
     }
-    const fieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
-      player_name: "Player name",
-      date_of_birth: "Date of birth",
-      age_group: "Age group",
-      guardian_name: "Guardian name",
-      guardian_email: "Guardian email",
-      guardian_phone: "Guardian phone",
-      start_date: "Enrollment date",
-      status: "Enrollment status",
-    };
+
+    const edit = studentEdits[enrollment.id];
+    if (!edit) return;
     const changes: Partial<StudentEnrollmentEdit> = {};
-    Object.assign(changes, { [field]: nextValue });
-    setPendingStudentUpdate({
-      enrollment,
-      changes,
-      field,
-      fieldLabel: fieldLabels[field],
-      previousValue: enrollment[field],
-      nextValue,
-    });
-  }
-
-  function cancelStudentUpdate() {
-    if (pendingStudentUpdate) {
-      setStudentEdits((current) => {
-        const next = { ...current };
-        delete next[pendingStudentUpdate.enrollment.id];
-        return next;
-      });
+    for (const field of Object.keys(edit) as (keyof StudentEnrollmentEdit)[]) {
+      if (edit[field] !== enrollment[field]) {
+        Object.assign(changes, { [field]: edit[field] });
+      }
     }
-    setPendingStudentUpdate(null);
+    if (Object.keys(changes).length === 0) {
+      toast.info("No student details have changed.");
+      return;
+    }
+    setPendingConfirmation({ kind: "student", enrollment, changes });
   }
 
-  async function updateStudent({ enrollment, changes }: PendingStudentUpdate) {
+  async function updateStudent(
+    enrollment: StudentEnrollment,
+    changes: Partial<StudentEnrollmentEdit>,
+  ) {
     if (!supabase) return;
     setIsSubmitting(true);
     const { error } = await supabase
@@ -415,13 +442,18 @@ function StaffPage() {
         delete next[enrollment.id];
         return next;
       });
-      setPendingStudentUpdate(null);
+      setEditingStudentId(null);
+      setPendingConfirmation(null);
       await refreshStudents();
     }
     setIsSubmitting(false);
   }
 
-  async function updateMonthlyFee(enrollment: StudentEnrollment, status: "paid" | "unpaid") {
+  async function updateMonthlyFee(
+    enrollment: StudentEnrollment,
+    status: "paid" | "unpaid",
+    billingMonth: string,
+  ) {
     if (!supabase) return;
     setIsSubmitting(true);
     const { data, error } = await supabase
@@ -429,7 +461,7 @@ function StaffPage() {
       .upsert(
         {
           enrollment_id: enrollment.id,
-          billing_month: `${feeMonth}-01`,
+          billing_month: `${billingMonth}-01`,
           status,
           paid_at: status === "paid" ? new Date().toISOString() : null,
         },
@@ -451,6 +483,7 @@ function StaffPage() {
           ? `${enrollment.player_name}'s fee marked paid`
           : `${enrollment.player_name}'s fee marked unpaid`,
       );
+      setPendingConfirmation(null);
     }
     setIsSubmitting(false);
   }
@@ -709,194 +742,218 @@ function StaffPage() {
                     .includes(studentSearch.trim().toLocaleLowerCase()),
                 )
                 .map((student) => {
-                  const edit = studentEdits[student.id] ?? student;
                   const fee = monthlyFees[student.id];
                   const isFeePaid = fee?.status === "paid";
                   return (
                     <Card key={student.id}>
                       <CardContent className="p-5 md:p-6">
-                        <form
-                          className="grid gap-4 md:grid-cols-2"
-                          onBlurCapture={(event) => {
-                            const control = event.target;
-                            if (
-                              !(control instanceof HTMLInputElement) &&
-                              !(control instanceof HTMLSelectElement)
-                            ) {
-                              return;
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <h3 className="font-display text-2xl uppercase">
+                              {student.player_name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {student.age_group} · Born{" "}
+                              {new Date(`${student.date_of_birth}T00:00:00`).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Enrolled{" "}
+                              {new Date(`${student.start_date}T00:00:00`).toLocaleDateString()} ·{" "}
+                              {student.status === "active" ? "Active" : "Inactive"}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isSubmitting}
+                            onClick={() => openStudentEditor(student)}
+                          >
+                            Make changes
+                          </Button>
+                        </div>
+                        <Dialog
+                          open={editingStudentId === student.id}
+                          onOpenChange={(open) => {
+                            if (!open && editingStudentId === student.id && !pendingConfirmation) {
+                              discardStudentEdit(student.id);
                             }
-                            const field = control.name as keyof StudentEnrollmentEdit;
-                            if (field in student) {
-                              const currentEdit = studentEdits[student.id] ?? student;
-                              requestStudentUpdate(student, field, control, currentEdit[field]);
-                            }
-                          }}
-                          onSubmit={(event) => {
-                            event.preventDefault();
                           }}
                         >
-                          <p className="text-sm text-muted-foreground md:col-span-2">
-                            Each changed field asks for confirmation before it is updated.
-                          </p>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-name-${student.id}`}>Player name</Label>
-                            <Input
-                              id={`student-name-${student.id}`}
-                              name="player_name"
-                              value={edit.player_name}
-                              onChange={(event) =>
-                                setStudentField(student, "player_name", event.target.value)
-                              }
-                              required
-                              minLength={2}
-                              maxLength={100}
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-dob-${student.id}`}>Date of birth</Label>
-                            <Input
-                              id={`student-dob-${student.id}`}
-                              name="date_of_birth"
-                              type="date"
-                              value={edit.date_of_birth}
-                              onChange={(event) => {
-                                setStudentField(student, "date_of_birth", event.target.value);
-                                requestStudentUpdate(
-                                  student,
-                                  "date_of_birth",
-                                  event.currentTarget,
-                                  event.target.value,
-                                );
+                          <DialogContent className="max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Make changes to {student.player_name}</DialogTitle>
+                              <DialogDescription>
+                                Update the student record. You’ll review and confirm before changes
+                                are applied.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form
+                              className="grid gap-4 sm:grid-cols-2"
+                              onSubmit={(event) => {
+                                event.preventDefault();
+                                reviewStudentChanges(student, event.currentTarget);
                               }}
-                              required
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-group-${student.id}`}>Age group</Label>
-                            <select
-                              id={`student-group-${student.id}`}
-                              name="age_group"
-                              value={edit.age_group}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                if (["U10", "U12", "U15", "U18"].includes(value)) {
-                                  setStudentField(
-                                    student,
-                                    "age_group",
-                                    value as StudentEnrollment["age_group"],
-                                  );
-                                  requestStudentUpdate(
-                                    student,
-                                    "age_group",
-                                    event.currentTarget,
-                                    value,
-                                  );
-                                }
-                              }}
-                              disabled={isSubmitting}
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             >
-                              <option value="U10">U10</option>
-                              <option value="U12">U12</option>
-                              <option value="U15">U15</option>
-                              <option value="U18">U18</option>
-                            </select>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-start-${student.id}`}>
-                              Enrollment start date
-                            </Label>
-                            <Input
-                              id={`student-start-${student.id}`}
-                              name="start_date"
-                              type="date"
-                              value={edit.start_date}
-                              onChange={(event) => {
-                                setStudentField(student, "start_date", event.target.value);
-                                requestStudentUpdate(
-                                  student,
-                                  "start_date",
-                                  event.currentTarget,
-                                  event.target.value,
-                                );
-                              }}
-                              required
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-guardian-${student.id}`}>Guardian name</Label>
-                            <Input
-                              id={`student-guardian-${student.id}`}
-                              name="guardian_name"
-                              value={edit.guardian_name}
-                              onChange={(event) =>
-                                setStudentField(student, "guardian_name", event.target.value)
-                              }
-                              required
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-email-${student.id}`}>Guardian email</Label>
-                            <Input
-                              id={`student-email-${student.id}`}
-                              name="guardian_email"
-                              type="email"
-                              value={edit.guardian_email}
-                              onChange={(event) =>
-                                setStudentField(student, "guardian_email", event.target.value)
-                              }
-                              required
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-phone-${student.id}`}>Guardian phone</Label>
-                            <Input
-                              id={`student-phone-${student.id}`}
-                              name="guardian_phone"
-                              type="tel"
-                              value={edit.guardian_phone}
-                              onChange={(event) =>
-                                setStudentField(student, "guardian_phone", event.target.value)
-                              }
-                              required
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor={`student-status-${student.id}`}>
-                              Enrollment status
-                            </Label>
-                            <select
-                              id={`student-status-${student.id}`}
-                              name="status"
-                              value={edit.status}
-                              onChange={(event) => {
-                                if (
-                                  event.target.value === "active" ||
-                                  event.target.value === "inactive"
-                                ) {
-                                  setStudentField(student, "status", event.target.value);
-                                  requestStudentUpdate(
-                                    student,
-                                    "status",
-                                    event.currentTarget,
-                                    event.target.value,
-                                  );
-                                }
-                              }}
-                              disabled={isSubmitting}
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            >
-                              <option value="active">Active</option>
-                              <option value="inactive">Inactive</option>
-                            </select>
-                          </div>
-                        </form>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-name-${student.id}`}>Player name</Label>
+                                <Input
+                                  id={`student-name-${student.id}`}
+                                  value={
+                                    studentEdits[student.id]?.player_name ?? student.player_name
+                                  }
+                                  onChange={(event) =>
+                                    setStudentField(student, "player_name", event.target.value)
+                                  }
+                                  required
+                                  minLength={2}
+                                  maxLength={100}
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-dob-${student.id}`}>Date of birth</Label>
+                                <Input
+                                  id={`student-dob-${student.id}`}
+                                  type="date"
+                                  value={
+                                    studentEdits[student.id]?.date_of_birth ?? student.date_of_birth
+                                  }
+                                  onChange={(event) =>
+                                    setStudentField(student, "date_of_birth", event.target.value)
+                                  }
+                                  required
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-group-${student.id}`}>Age group</Label>
+                                <select
+                                  id={`student-group-${student.id}`}
+                                  value={studentEdits[student.id]?.age_group ?? student.age_group}
+                                  onChange={(event) => {
+                                    const value = event.target.value;
+                                    if (["U10", "U12", "U15", "U18"].includes(value)) {
+                                      setStudentField(
+                                        student,
+                                        "age_group",
+                                        value as StudentEnrollment["age_group"],
+                                      );
+                                    }
+                                  }}
+                                  disabled={isSubmitting}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                  <option value="U10">U10</option>
+                                  <option value="U12">U12</option>
+                                  <option value="U15">U15</option>
+                                  <option value="U18">U18</option>
+                                </select>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-start-${student.id}`}>
+                                  Enrollment start date
+                                </Label>
+                                <Input
+                                  id={`student-start-${student.id}`}
+                                  type="date"
+                                  value={studentEdits[student.id]?.start_date ?? student.start_date}
+                                  onChange={(event) =>
+                                    setStudentField(student, "start_date", event.target.value)
+                                  }
+                                  required
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-guardian-${student.id}`}>
+                                  Guardian name
+                                </Label>
+                                <Input
+                                  id={`student-guardian-${student.id}`}
+                                  value={
+                                    studentEdits[student.id]?.guardian_name ?? student.guardian_name
+                                  }
+                                  onChange={(event) =>
+                                    setStudentField(student, "guardian_name", event.target.value)
+                                  }
+                                  required
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-email-${student.id}`}>
+                                  Guardian email
+                                </Label>
+                                <Input
+                                  id={`student-email-${student.id}`}
+                                  type="email"
+                                  value={
+                                    studentEdits[student.id]?.guardian_email ??
+                                    student.guardian_email
+                                  }
+                                  onChange={(event) =>
+                                    setStudentField(student, "guardian_email", event.target.value)
+                                  }
+                                  required
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-phone-${student.id}`}>
+                                  Guardian phone
+                                </Label>
+                                <Input
+                                  id={`student-phone-${student.id}`}
+                                  type="tel"
+                                  value={
+                                    studentEdits[student.id]?.guardian_phone ??
+                                    student.guardian_phone
+                                  }
+                                  onChange={(event) =>
+                                    setStudentField(student, "guardian_phone", event.target.value)
+                                  }
+                                  required
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor={`student-status-${student.id}`}>
+                                  Enrollment status
+                                </Label>
+                                <select
+                                  id={`student-status-${student.id}`}
+                                  value={studentEdits[student.id]?.status ?? student.status}
+                                  onChange={(event) => {
+                                    if (
+                                      event.target.value === "active" ||
+                                      event.target.value === "inactive"
+                                    ) {
+                                      setStudentField(student, "status", event.target.value);
+                                    }
+                                  }}
+                                  disabled={isSubmitting}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="inactive">Inactive</option>
+                                </select>
+                              </div>
+                              <DialogFooter className="sm:col-span-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  disabled={isSubmitting}
+                                  onClick={() => discardStudentEdit(student.id)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={isSubmitting}>
+                                  Review changes
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                           <div>
                             <p className="font-semibold">
@@ -926,7 +983,12 @@ function StaffPage() {
                             variant={isFeePaid ? "outline" : "default"}
                             disabled={isSubmitting || areMonthlyFeesLoading || monthlyFeeLoadFailed}
                             onClick={() =>
-                              void updateMonthlyFee(student, isFeePaid ? "unpaid" : "paid")
+                              setPendingConfirmation({
+                                kind: "fee",
+                                enrollment: student,
+                                status: isFeePaid ? "unpaid" : "paid",
+                                billingMonth: feeMonth,
+                              })
                             }
                           >
                             {monthlyFeeLoadFailed
@@ -943,47 +1005,62 @@ function StaffPage() {
         </section>
       )}
       <AlertDialog
-        open={pendingStudentUpdate !== null}
+        open={pendingConfirmation !== null}
         onOpenChange={(open) => {
-          if (!open) cancelStudentUpdate();
+          if (!open && !isSubmitting) setPendingConfirmation(null);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm student profile changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                Confirm changing {pendingStudentUpdate?.fieldLabel?.toLowerCase()} for{" "}
-                {pendingStudentUpdate?.enrollment.player_name}.
+            <AlertDialogTitle>
+              {pendingConfirmation?.kind === "fee"
+                ? `Mark fee ${pendingConfirmation.status}?`
+                : "Confirm student profile changes"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingConfirmation?.kind === "fee"
+                ? `Confirm marking ${pendingConfirmation.enrollment.player_name}'s ${new Date(`${pendingConfirmation.billingMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })} fee as ${pendingConfirmation.status}.`
+                : `Review the changes for ${pendingConfirmation?.enrollment.player_name} before updating the student record.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-            {pendingStudentUpdate && (
-              <div className="grid gap-2 rounded-md border bg-muted/40 p-4 text-sm">
-                <p>
-                  <span className="font-medium">Current:</span>{" "}
-                  {formatStudentFieldValue(
-                    pendingStudentUpdate.field,
-                    pendingStudentUpdate.previousValue,
-                  )}
+          {pendingConfirmation?.kind === "student" && (
+            <div className="grid max-h-60 gap-2 overflow-y-auto rounded-md border bg-muted/40 p-4 text-sm">
+              {(
+                Object.entries(pendingConfirmation.changes) as [
+                  keyof StudentEnrollmentEdit,
+                  string,
+                ][]
+              ).map(([field, value]) => (
+                <p key={field}>
+                  <span className="font-medium">{studentFieldLabels[field]}:</span>{" "}
+                  {formatStudentFieldValue(field, pendingConfirmation.enrollment[field])}{" "}
+                  <span aria-hidden="true">→</span> {formatStudentFieldValue(field, value)}
                 </p>
-                <p>
-                  <span className="font-medium">New:</span>{" "}
-                  {formatStudentFieldValue(
-                    pendingStudentUpdate.field,
-                    pendingStudentUpdate.nextValue,
-                  )}
-                </p>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>No, discard changes</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting}>No, go back</AlertDialogCancel>
             <AlertDialogAction
               disabled={isSubmitting}
               onClick={(event) => {
                 event.preventDefault();
-                if (pendingStudentUpdate) void updateStudent(pendingStudentUpdate);
+                if (pendingConfirmation?.kind === "student") {
+                  void updateStudent(pendingConfirmation.enrollment, pendingConfirmation.changes);
+                } else if (pendingConfirmation?.kind === "fee") {
+                  void updateMonthlyFee(
+                    pendingConfirmation.enrollment,
+                    pendingConfirmation.status,
+                    pendingConfirmation.billingMonth,
+                  );
+                }
               }}
             >
-              {isSubmitting ? "Updating..." : "Yes, update details"}
+              {isSubmitting
+                ? "Updating..."
+                : pendingConfirmation?.kind === "fee"
+                  ? `Yes, mark ${pendingConfirmation.status}`
+                  : "Yes, apply changes"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
