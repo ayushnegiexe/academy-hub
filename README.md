@@ -12,6 +12,9 @@ to enable monthly fee tracking in the admin dashboard.
 Apply
 [`supabase/migrations/20261104150000_preserve_trial_approval_timestamp.sql`](./supabase/migrations/20261104150000_preserve_trial_approval_timestamp.sql)
 to keep the original approval timestamp when an approved trial is enrolled.
+Apply
+[`supabase/migrations/20261104160000_admin_dashboard_audit_history.sql`](./supabase/migrations/20261104160000_admin_dashboard_audit_history.sql)
+to enable admin change history for student profile and monthly fee updates.
 
 To grant admin access:
 
