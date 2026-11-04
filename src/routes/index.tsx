@@ -374,44 +374,6 @@ function TheCoach() {
   );
 }
 
-/* ---------------- INDIAN FLAG COMPONENT ---------------- */
-function IndianFlag({ className = "", delay = 0 }: { className?: string; delay?: number }) {
-  return (
-    <div className={`relative ${className}`} style={{ perspective: "800px" }}>
-      <div className="absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b from-zinc-300 via-zinc-500 to-zinc-700 shadow-lg" />
-      <div className="absolute -left-1 top-0 h-3 w-3 rounded-full bg-gold shadow-md" />
-      <div
-        className="absolute left-[3px] top-2 h-[70%] w-[calc(100%-3px)] origin-left shadow-2xl"
-        style={{
-          animation: `flagWave 3.5s ease-in-out ${delay}s infinite`,
-          filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.5))",
-        }}
-      >
-        <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex-1 bg-[#FF9933] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/15 mix-blend-overlay" />
-          </div>
-          <div className="flex-1 bg-white flex items-center justify-center relative overflow-hidden">
-            <div className="relative aspect-square h-[85%] rounded-full border-[3px] border-[#0a3a8c]">
-              {Array.from({ length: 24 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute left-1/2 top-1/2 h-[46%] w-[1.5px] bg-[#0a3a8c] origin-top"
-                  style={{ transform: `translate(-50%, 0) rotate(${i * 15}deg)` }}
-                />
-              ))}
-              <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0a3a8c]" />
-            </div>
-          </div>
-          <div className="flex-1 bg-[#138808] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/15 mix-blend-overlay" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ---------------- SOLDIER TRIBUTE ---------------- */
 function SoldierTribute() {
   const verses = [
@@ -467,17 +429,6 @@ function SoldierTribute() {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-      {/* Wavy flags */}
-      <div className="pointer-events-none absolute inset-y-0 left-2 hidden w-40 lg:w-56 md:block">
-        <div className="sticky top-1/2 -translate-y-1/2">
-          <IndianFlag className="h-64 w-40 lg:h-80 lg:w-56" delay={0} />
-        </div>
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 right-2 hidden w-40 lg:w-56 md:block">
-        <div className="sticky top-1/2 -translate-y-1/2">
-          <IndianFlag className="h-64 w-40 lg:h-80 lg:w-56" delay={0.6} />
         </div>
       </div>
     </section>
