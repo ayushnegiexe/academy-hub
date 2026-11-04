@@ -51,6 +51,10 @@ type StudentEnrollmentEdit = Omit<StudentEnrollment, "id">;
 type PendingStudentUpdate = {
   enrollment: StudentEnrollment;
   changes: Partial<StudentEnrollmentEdit>;
+  field: keyof StudentEnrollmentEdit;
+  fieldLabel: string;
+  previousValue: string;
+  nextValue: string;
 };
 
 type MonthlyFeeStatus = {
@@ -349,42 +353,38 @@ function StaffPage() {
     }));
   }
 
-  function getStudentChanges(enrollment: StudentEnrollment) {
-    const edit = studentEdits[enrollment.id];
-    if (!edit) return null;
-
-    const changes: Partial<StudentEnrollmentEdit> = {};
-    if (edit.player_name !== enrollment.player_name) changes.player_name = edit.player_name;
-    if (edit.date_of_birth !== enrollment.date_of_birth) {
-      changes.date_of_birth = edit.date_of_birth;
-    }
-    if (edit.age_group !== enrollment.age_group) changes.age_group = edit.age_group;
-    if (edit.guardian_name !== enrollment.guardian_name) {
-      changes.guardian_name = edit.guardian_name;
-    }
-    if (edit.guardian_email !== enrollment.guardian_email) {
-      changes.guardian_email = edit.guardian_email;
-    }
-    if (edit.guardian_phone !== enrollment.guardian_phone) {
-      changes.guardian_phone = edit.guardian_phone;
-    }
-    if (edit.start_date !== enrollment.start_date) changes.start_date = edit.start_date;
-    if (edit.status !== enrollment.status) changes.status = edit.status;
-
-    return Object.keys(changes).length > 0 ? changes : null;
-  }
-
   function requestStudentUpdate(
     enrollment: StudentEnrollment,
-    form: HTMLFormElement,
+    field: keyof StudentEnrollmentEdit,
+    control: HTMLInputElement | HTMLSelectElement,
+    nextValue: string,
   ) {
-    const changes = getStudentChanges(enrollment);
-    if (!changes) return;
-    if (!form.checkValidity()) {
-      form.reportValidity();
+    if (pendingStudentUpdate || isSubmitting) return;
+    if (nextValue === enrollment[field]) return;
+    if (!control.checkValidity()) {
+      control.reportValidity();
       return;
     }
-    setPendingStudentUpdate({ enrollment, changes });
+    const fieldLabels: Record<keyof StudentEnrollmentEdit, string> = {
+      player_name: "Player name",
+      date_of_birth: "Date of birth",
+      age_group: "Age group",
+      guardian_name: "Guardian name",
+      guardian_email: "Guardian email",
+      guardian_phone: "Guardian phone",
+      start_date: "Enrollment date",
+      status: "Enrollment status",
+    };
+    const changes: Partial<StudentEnrollmentEdit> = {};
+    Object.assign(changes, { [field]: nextValue });
+    setPendingStudentUpdate({
+      enrollment,
+      changes,
+      field,
+      fieldLabel: fieldLabels[field],
+      previousValue: enrollment[field],
+      nextValue,
+    });
   }
 
   function cancelStudentUpdate() {
@@ -718,27 +718,31 @@ function StaffPage() {
                         <form
                           className="grid gap-4 md:grid-cols-2"
                           onBlurCapture={(event) => {
+                            const control = event.target;
                             if (
-                              event.relatedTarget instanceof Node &&
-                              event.currentTarget.contains(event.relatedTarget)
+                              !(control instanceof HTMLInputElement) &&
+                              !(control instanceof HTMLSelectElement)
                             ) {
                               return;
                             }
-                            requestStudentUpdate(student, event.currentTarget);
+                            const field = control.name as keyof StudentEnrollmentEdit;
+                            if (field in student) {
+                              const currentEdit = studentEdits[student.id] ?? student;
+                              requestStudentUpdate(student, field, control, currentEdit[field]);
+                            }
                           }}
                           onSubmit={(event) => {
                             event.preventDefault();
-                            requestStudentUpdate(student, event.currentTarget);
                           }}
                         >
                           <p className="text-sm text-muted-foreground md:col-span-2">
-                            When you finish editing and leave this form, we’ll ask you to confirm
-                            before applying the changes.
+                            Each changed field asks for confirmation before it is updated.
                           </p>
                           <div className="grid gap-2">
                             <Label htmlFor={`student-name-${student.id}`}>Player name</Label>
                             <Input
                               id={`student-name-${student.id}`}
+                              name="player_name"
                               value={edit.player_name}
                               onChange={(event) =>
                                 setStudentField(student, "player_name", event.target.value)
@@ -753,11 +757,18 @@ function StaffPage() {
                             <Label htmlFor={`student-dob-${student.id}`}>Date of birth</Label>
                             <Input
                               id={`student-dob-${student.id}`}
+                              name="date_of_birth"
                               type="date"
                               value={edit.date_of_birth}
-                              onChange={(event) =>
-                                setStudentField(student, "date_of_birth", event.target.value)
-                              }
+                              onChange={(event) => {
+                                setStudentField(student, "date_of_birth", event.target.value);
+                                requestStudentUpdate(
+                                  student,
+                                  "date_of_birth",
+                                  event.currentTarget,
+                                  event.target.value,
+                                );
+                              }}
                               required
                               disabled={isSubmitting}
                             />
@@ -766,6 +777,7 @@ function StaffPage() {
                             <Label htmlFor={`student-group-${student.id}`}>Age group</Label>
                             <select
                               id={`student-group-${student.id}`}
+                              name="age_group"
                               value={edit.age_group}
                               onChange={(event) => {
                                 const value = event.target.value;
@@ -774,6 +786,12 @@ function StaffPage() {
                                     student,
                                     "age_group",
                                     value as StudentEnrollment["age_group"],
+                                  );
+                                  requestStudentUpdate(
+                                    student,
+                                    "age_group",
+                                    event.currentTarget,
+                                    value,
                                   );
                                 }
                               }}
@@ -792,11 +810,18 @@ function StaffPage() {
                             </Label>
                             <Input
                               id={`student-start-${student.id}`}
+                              name="start_date"
                               type="date"
                               value={edit.start_date}
-                              onChange={(event) =>
-                                setStudentField(student, "start_date", event.target.value)
-                              }
+                              onChange={(event) => {
+                                setStudentField(student, "start_date", event.target.value);
+                                requestStudentUpdate(
+                                  student,
+                                  "start_date",
+                                  event.currentTarget,
+                                  event.target.value,
+                                );
+                              }}
                               required
                               disabled={isSubmitting}
                             />
@@ -805,6 +830,7 @@ function StaffPage() {
                             <Label htmlFor={`student-guardian-${student.id}`}>Guardian name</Label>
                             <Input
                               id={`student-guardian-${student.id}`}
+                              name="guardian_name"
                               value={edit.guardian_name}
                               onChange={(event) =>
                                 setStudentField(student, "guardian_name", event.target.value)
@@ -817,6 +843,7 @@ function StaffPage() {
                             <Label htmlFor={`student-email-${student.id}`}>Guardian email</Label>
                             <Input
                               id={`student-email-${student.id}`}
+                              name="guardian_email"
                               type="email"
                               value={edit.guardian_email}
                               onChange={(event) =>
@@ -830,6 +857,7 @@ function StaffPage() {
                             <Label htmlFor={`student-phone-${student.id}`}>Guardian phone</Label>
                             <Input
                               id={`student-phone-${student.id}`}
+                              name="guardian_phone"
                               type="tel"
                               value={edit.guardian_phone}
                               onChange={(event) =>
@@ -845,6 +873,7 @@ function StaffPage() {
                             </Label>
                             <select
                               id={`student-status-${student.id}`}
+                              name="status"
                               value={edit.status}
                               onChange={(event) => {
                                 if (
@@ -852,6 +881,12 @@ function StaffPage() {
                                   event.target.value === "inactive"
                                 ) {
                                   setStudentField(student, "status", event.target.value);
+                                  requestStudentUpdate(
+                                    student,
+                                    "status",
+                                    event.currentTarget,
+                                    event.target.value,
+                                  );
                                 }
                               }}
                               disabled={isSubmitting}
@@ -916,11 +951,29 @@ function StaffPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm student profile changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              Apply your changes to {pendingStudentUpdate?.enrollment.player_name}’s profile? This
-              will update the student record immediately.
+              <AlertDialogDescription>
+                Confirm changing {pendingStudentUpdate?.fieldLabel?.toLowerCase()} for{" "}
+                {pendingStudentUpdate?.enrollment.player_name}.
             </AlertDialogDescription>
           </AlertDialogHeader>
+            {pendingStudentUpdate && (
+              <div className="grid gap-2 rounded-md border bg-muted/40 p-4 text-sm">
+                <p>
+                  <span className="font-medium">Current:</span>{" "}
+                  {formatStudentFieldValue(
+                    pendingStudentUpdate.field,
+                    pendingStudentUpdate.previousValue,
+                  )}
+                </p>
+                <p>
+                  <span className="font-medium">New:</span>{" "}
+                  {formatStudentFieldValue(
+                    pendingStudentUpdate.field,
+                    pendingStudentUpdate.nextValue,
+                  )}
+                </p>
+              </div>
+            )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSubmitting}>No, discard changes</AlertDialogCancel>
             <AlertDialogAction
@@ -947,4 +1000,14 @@ function DashboardMessage({ message }: { message: string }) {
       </Card>
     </section>
   );
+}
+
+function formatStudentFieldValue(field: keyof StudentEnrollmentEdit, value: string) {
+  if (field === "date_of_birth" || field === "start_date") {
+    return new Date(`${value}T00:00:00`).toLocaleDateString();
+  }
+  if (field === "status") {
+    return value === "active" ? "Active" : "Inactive";
+  }
+  return value;
 }
