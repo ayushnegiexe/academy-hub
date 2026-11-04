@@ -5,6 +5,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/subpabase";
 import { toast } from "sonner";
 
@@ -37,6 +47,11 @@ type StudentEnrollment = {
 };
 
 type StudentEnrollmentEdit = Omit<StudentEnrollment, "id">;
+
+type PendingStudentUpdate = {
+  enrollment: StudentEnrollment;
+  changes: Partial<StudentEnrollmentEdit>;
+};
 
 type MonthlyFeeStatus = {
   status: "paid" | "unpaid";
@@ -74,6 +89,9 @@ function StaffPage() {
   const [areMonthlyFeesLoading, setAreMonthlyFeesLoading] = useState(false);
   const [monthlyFeeLoadFailed, setMonthlyFeeLoadFailed] = useState(false);
   const [studentEdits, setStudentEdits] = useState<Record<string, StudentEnrollmentEdit>>({});
+  const [pendingStudentUpdate, setPendingStudentUpdate] = useState<PendingStudentUpdate | null>(
+    null,
+  );
   const [startDates, setStartDates] = useState<Record<string, string>>({});
   const [staffNotes, setStaffNotes] = useState<Record<string, string>>({});
 
@@ -331,10 +349,57 @@ function StaffPage() {
     }));
   }
 
-  async function updateStudent(enrollment: StudentEnrollment) {
-    if (!supabase) return;
-    const changes = studentEdits[enrollment.id];
+  function getStudentChanges(enrollment: StudentEnrollment) {
+    const edit = studentEdits[enrollment.id];
+    if (!edit) return null;
+
+    const changes: Partial<StudentEnrollmentEdit> = {};
+    if (edit.player_name !== enrollment.player_name) changes.player_name = edit.player_name;
+    if (edit.date_of_birth !== enrollment.date_of_birth) {
+      changes.date_of_birth = edit.date_of_birth;
+    }
+    if (edit.age_group !== enrollment.age_group) changes.age_group = edit.age_group;
+    if (edit.guardian_name !== enrollment.guardian_name) {
+      changes.guardian_name = edit.guardian_name;
+    }
+    if (edit.guardian_email !== enrollment.guardian_email) {
+      changes.guardian_email = edit.guardian_email;
+    }
+    if (edit.guardian_phone !== enrollment.guardian_phone) {
+      changes.guardian_phone = edit.guardian_phone;
+    }
+    if (edit.start_date !== enrollment.start_date) changes.start_date = edit.start_date;
+    if (edit.status !== enrollment.status) changes.status = edit.status;
+
+    return Object.keys(changes).length > 0 ? changes : null;
+  }
+
+  function requestStudentUpdate(
+    enrollment: StudentEnrollment,
+    form: HTMLFormElement,
+  ) {
+    const changes = getStudentChanges(enrollment);
     if (!changes) return;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    setPendingStudentUpdate({ enrollment, changes });
+  }
+
+  function cancelStudentUpdate() {
+    if (pendingStudentUpdate) {
+      setStudentEdits((current) => {
+        const next = { ...current };
+        delete next[pendingStudentUpdate.enrollment.id];
+        return next;
+      });
+    }
+    setPendingStudentUpdate(null);
+  }
+
+  async function updateStudent({ enrollment, changes }: PendingStudentUpdate) {
+    if (!supabase) return;
     setIsSubmitting(true);
     const { error } = await supabase
       .from("player_enrollments")
@@ -350,6 +415,7 @@ function StaffPage() {
         delete next[enrollment.id];
         return next;
       });
+      setPendingStudentUpdate(null);
       await refreshStudents();
     }
     setIsSubmitting(false);
@@ -651,11 +717,24 @@ function StaffPage() {
                       <CardContent className="p-5 md:p-6">
                         <form
                           className="grid gap-4 md:grid-cols-2"
+                          onBlurCapture={(event) => {
+                            if (
+                              event.relatedTarget instanceof Node &&
+                              event.currentTarget.contains(event.relatedTarget)
+                            ) {
+                              return;
+                            }
+                            requestStudentUpdate(student, event.currentTarget);
+                          }}
                           onSubmit={(event) => {
                             event.preventDefault();
-                            void updateStudent(student);
+                            requestStudentUpdate(student, event.currentTarget);
                           }}
                         >
+                          <p className="text-sm text-muted-foreground md:col-span-2">
+                            When you finish editing and leave this form, we’ll ask you to confirm
+                            before applying the changes.
+                          </p>
                           <div className="grid gap-2">
                             <Label htmlFor={`student-name-${student.id}`}>Player name</Label>
                             <Input
@@ -782,14 +861,6 @@ function StaffPage() {
                               <option value="inactive">Inactive</option>
                             </select>
                           </div>
-                          <div className="md:col-span-2">
-                            <Button
-                              type="submit"
-                              disabled={isSubmitting || !studentEdits[student.id]}
-                            >
-                              Save student
-                            </Button>
-                          </div>
                         </form>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                           <div>
@@ -836,6 +907,34 @@ function StaffPage() {
           )}
         </section>
       )}
+      <AlertDialog
+        open={pendingStudentUpdate !== null}
+        onOpenChange={(open) => {
+          if (!open) cancelStudentUpdate();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm student profile changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apply your changes to {pendingStudentUpdate?.enrollment.player_name}’s profile? This
+              will update the student record immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>No, discard changes</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isSubmitting}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingStudentUpdate) void updateStudent(pendingStudentUpdate);
+              }}
+            >
+              {isSubmitting ? "Updating..." : "Yes, update details"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
