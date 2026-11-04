@@ -73,7 +73,7 @@ export function SiteHeader() {
               <Instagram className="h-4 w-4" />
             </a>
             <a
-              href="tel:+442079460123"
+              href="tel:+918218245579"
               aria-label="Call Devsheel Football Academy"
               title="Call"
               className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-gold"
@@ -133,7 +133,7 @@ export function SiteHeader() {
                 <Instagram className="h-4 w-4" /> Instagram
               </a>
               <a
-                href="tel:+442079460123"
+                href="tel:+918218245579"
                 aria-label="Call Devsheel Football Academy"
                 className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 hover:text-gold"
               >

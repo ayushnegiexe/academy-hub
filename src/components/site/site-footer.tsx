@@ -63,7 +63,10 @@ export function SiteFooter() {
               <span>Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007</span>
             </li>
             <li className="flex gap-4">
-              <Phone className="h-5 w-5 shrink-0 text-gold" /> +44 20 7946 0123
+              <Phone className="h-5 w-5 shrink-0 text-gold" />
+              <a href="tel:+918218245579" className="hover:text-white">
+                +91 821 824 5579
+              </a>
             </li>
             <li className="flex gap-4">
               <Mail className="h-5 w-5 shrink-0 text-gold" /> hello@devsheel.fc
