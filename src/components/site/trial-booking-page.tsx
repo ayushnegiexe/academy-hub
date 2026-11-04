@@ -37,6 +37,7 @@ export function TrialBookingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [ageGroup, setAgeGroup] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
   const [submittedPlayerName, setSubmittedPlayerName] = useState<string | null>(null);
   const playerAge = getAgeOnDate(dateOfBirth);
 
@@ -77,6 +78,7 @@ export function TrialBookingPage() {
       form.reset();
       setDateOfBirth("");
       setAgeGroup("");
+      setGuardianPhone("");
     } catch (error) {
       console.error("Trial request submission failed:", error);
       toast.error("Could not send your request", {
@@ -213,12 +215,20 @@ export function TrialBookingPage() {
                     id="guardian_phone"
                     name="guardian_phone"
                     type="tel"
+                    inputMode="numeric"
                     required
-                    minLength={7}
-                    maxLength={30}
-                    pattern="[+0-9() -]{7,30}"
+                    minLength={10}
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                    autoComplete="tel-national"
+                    placeholder="10-digit mobile number"
+                    value={guardianPhone}
+                    onChange={(event) =>
+                      setGuardianPhone(event.target.value.replace(/\D/g, "").slice(0, 10))
+                    }
                     disabled={isSubmitting}
                   />
+                  <p className="text-xs text-muted-foreground">Enter exactly 10 digits.</p>
                 </div>
               </div>
 
