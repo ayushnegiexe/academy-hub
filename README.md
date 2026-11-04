@@ -9,6 +9,9 @@ to the configured Supabase project before using the workflow.
 Apply
 [`supabase/migrations/20261104140000_add_monthly_student_fees.sql`](./supabase/migrations/20261104140000_add_monthly_student_fees.sql)
 to enable monthly fee tracking in the staff dashboard.
+Apply
+[`supabase/migrations/20261104150000_preserve_trial_approval_timestamp.sql`](./supabase/migrations/20261104150000_preserve_trial_approval_timestamp.sql)
+to keep the original approval timestamp when an approved trial is enrolled.
 
 To grant staff access:
 

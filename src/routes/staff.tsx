@@ -21,6 +21,7 @@ type TrialRequest = {
   status: "pending" | "approved" | "rejected" | "enrolled";
   staff_notes: string | null;
   submitted_at: string;
+  reviewed_at: string | null;
 };
 
 type StudentEnrollment = {
@@ -141,7 +142,7 @@ function StaffPage() {
         supabase!
           .from("trial_requests")
           .select(
-            "id, player_name, date_of_birth, age_group, guardian_name, guardian_email, guardian_phone, preferred_trial_date, notes, status, staff_notes, submitted_at",
+            "id, player_name, date_of_birth, age_group, guardian_name, guardian_email, guardian_phone, preferred_trial_date, notes, status, staff_notes, submitted_at, reviewed_at",
           )
           .order("submitted_at", { ascending: false }),
         supabase!
@@ -280,7 +281,7 @@ function StaffPage() {
     const { data, error } = await supabase
       .from("trial_requests")
       .select(
-        "id, player_name, date_of_birth, age_group, guardian_name, guardian_email, guardian_phone, preferred_trial_date, notes, status, staff_notes, submitted_at",
+        "id, player_name, date_of_birth, age_group, guardian_name, guardian_email, guardian_phone, preferred_trial_date, notes, status, staff_notes, submitted_at, reviewed_at",
       )
       .order("submitted_at", { ascending: false });
     if (error) {
@@ -507,8 +508,17 @@ function StaffPage() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Born {request.date_of_birth} · Submitted{" "}
-                    {new Date(request.submitted_at).toLocaleDateString()}
+                    Born {request.date_of_birth} ·{" "}
+                    {request.status === "approved" || request.status === "enrolled" ? (
+                      <>
+                        Approved{" "}
+                        {request.reviewed_at
+                          ? new Date(request.reviewed_at).toLocaleString()
+                          : "time unavailable"}
+                      </>
+                    ) : (
+                      <>Submitted {new Date(request.submitted_at).toLocaleDateString()}</>
+                    )}
                   </p>
                   <p className="text-sm">
                     Guardian: {request.guardian_name} ·{" "}
