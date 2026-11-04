@@ -518,6 +518,7 @@ function AdminPage() {
       student.player_name.toLocaleLowerCase().includes(studentSearch.trim().toLocaleLowerCase()),
     )
     .sort((a, b) => a.player_name.localeCompare(b.player_name, undefined, { sensitivity: "base" }));
+  const activeStudents = students.filter((student) => student.status === "active");
 
   if (!supabase) {
     return (
@@ -726,6 +727,27 @@ function AdminPage() {
       {!isLoading && isAdmin && (
         <section id="existing-students" className="mt-12 scroll-mt-36">
           <h2 className="mb-5 font-display text-3xl uppercase">Existing students & monthly fees</h2>
+          <div
+            aria-label="Active student counts"
+            className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+          >
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <p className="text-sm font-semibold text-muted-foreground">Total active</p>
+                <p className="mt-1 font-display text-3xl">{activeStudents.length}</p>
+              </CardContent>
+            </Card>
+            {(["U10", "U12", "U15", "U18"] as const).map((ageGroup) => (
+              <Card key={ageGroup}>
+                <CardContent className="p-4">
+                  <p className="text-sm font-semibold text-muted-foreground">{ageGroup}</p>
+                  <p className="mt-1 font-display text-3xl">
+                    {activeStudents.filter((student) => student.age_group === ageGroup).length}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
           <div className="mb-5 grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="student-search">Search students by name</Label>
