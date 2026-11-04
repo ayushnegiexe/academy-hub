@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -17,62 +16,109 @@ type FeatureCarouselProps = {
 };
 
 export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarouselProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
   const [activeSlideIndex, setActiveSlideIndex] = useState(items.length);
+  const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const activeSlideRef = useRef(items.length);
+  const isProgrammaticScrollRef = useRef(false);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeUpdateFrameRef = useRef<number | null>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
 
-  const cancelScrollAnimation = () => {
+  const pauseAutoplay = () => {
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    setIsAutoplayPaused(true);
+  };
+
+  const cancelScrollAnimation = useCallback(() => {
     if (scrollAnimationFrameRef.current !== null) {
       cancelAnimationFrame(scrollAnimationFrameRef.current);
       scrollAnimationFrameRef.current = null;
     }
-  };
+    isProgrammaticScrollRef.current = false;
+  }, []);
 
-  const centerSlide = (index: number) => {
-    const carousel = carouselRef.current;
-    const slide = slideRefs.current[index];
-    if (!carousel || !slide) return;
+  const centerSlide = useCallback(
+    (index: number) => {
+      const carousel = carouselRef.current;
+      const slide = slideRefs.current[index];
+      if (!carousel || !slide) return;
 
-    const carouselBounds = carousel.getBoundingClientRect();
-    const slideBounds = slide.getBoundingClientRect();
-    const startLeft = carousel.scrollLeft;
-    const targetLeft =
-      startLeft +
-      slideBounds.left -
-      carouselBounds.left +
-      slideBounds.width / 2 -
-      carousel.clientWidth / 2;
-    const distance = targetLeft - startLeft;
-    const duration = Math.min(850, Math.max(450, Math.abs(distance) * 0.75));
-    let startTime: number | null = null;
+      const carouselBounds = carousel.getBoundingClientRect();
+      const slideBounds = slide.getBoundingClientRect();
+      const startLeft = carousel.scrollLeft;
+      const targetLeft =
+        startLeft +
+        slideBounds.left -
+        carouselBounds.left +
+        slideBounds.width / 2 -
+        carousel.clientWidth / 2;
+      const distance = targetLeft - startLeft;
+      const duration = 2150;
+      let startTime: number | null = null;
 
-    cancelScrollAnimation();
-    const animate = (time: number) => {
-      if (startTime === null) startTime = time;
-      const progress = Math.min((time - startTime) / duration, 1);
-      const easedProgress =
-        progress < 0.5
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      cancelScrollAnimation();
+      isProgrammaticScrollRef.current = true;
+      setActiveSlideIndex(index);
 
-      carousel.scrollLeft = startLeft + distance * easedProgress;
+      const animate = (time: number) => {
+        if (startTime === null) startTime = time;
+        const progress = Math.min((time - startTime) / duration, 1);
+        const easedProgress = 0.5 - Math.cos(progress * Math.PI) / 2;
 
-      if (progress < 1) {
-        scrollAnimationFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        scrollAnimationFrameRef.current = null;
-      }
-    };
+        carousel.scrollLeft = startLeft + distance * easedProgress;
 
-    scrollAnimationFrameRef.current = requestAnimationFrame(animate);
+        if (progress < 1) {
+          scrollAnimationFrameRef.current = requestAnimationFrame(animate);
+        } else {
+          scrollAnimationFrameRef.current = null;
+          let settledIndex = index;
+          const firstSlide = slideRefs.current[0];
+          const repeatedSlide = slideRefs.current[items.length];
+          const cycleWidth =
+            firstSlide && repeatedSlide
+              ? repeatedSlide.getBoundingClientRect().left - firstSlide.getBoundingClientRect().left
+              : 0;
+
+          if (cycleWidth > 0 && carousel.scrollLeft < cycleWidth) {
+            settledIndex += items.length;
+            carousel.scrollLeft += cycleWidth;
+          } else if (cycleWidth > 0 && carousel.scrollLeft > cycleWidth * 2) {
+            settledIndex -= items.length;
+            carousel.scrollLeft -= cycleWidth;
+          }
+
+          activeSlideRef.current = settledIndex;
+          setActiveSlideIndex(settledIndex);
+          isProgrammaticScrollRef.current = false;
+        }
+      };
+
+      scrollAnimationFrameRef.current = requestAnimationFrame(animate);
+    },
+    [cancelScrollAnimation, items.length],
+  );
+
+  const advanceSlide = useCallback(() => {
+    if (document.visibilityState !== "visible") return;
+    const nextIndex = activeSlideRef.current + 1;
+    centerSlide(nextIndex < items.length * 3 ? nextIndex : items.length);
+  }, [centerSlide, items.length]);
+
+  const resumeAutoplayAfterInteraction = () => {
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    interactionTimeoutRef.current = setTimeout(() => {
+      setIsAutoplayPaused(false);
+      interactionTimeoutRef.current = null;
+      advanceSlide();
+    }, 1750);
   };
 
   const updateActiveItem = (carousel: HTMLDivElement) => {
+    if (isProgrammaticScrollRef.current) return;
+
     if (activeUpdateFrameRef.current === null) {
       activeUpdateFrameRef.current = requestAnimationFrame(() => {
         activeUpdateFrameRef.current = null;
@@ -92,12 +138,13 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
 
         activeSlideRef.current = closestIndex;
         setActiveSlideIndex(closestIndex);
-        setActiveIndex(closestIndex % items.length);
       });
     }
 
     if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
     settleTimeoutRef.current = setTimeout(() => {
+      if (isProgrammaticScrollRef.current) return;
+
       let closestIndex = activeSlideRef.current;
 
       const firstSlide = slideRefs.current[0];
@@ -117,7 +164,6 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
 
       activeSlideRef.current = closestIndex;
       setActiveSlideIndex(closestIndex);
-      setActiveIndex(closestIndex % items.length);
     }, 320);
   };
 
@@ -129,7 +175,6 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
 
       activeSlideRef.current = items.length;
       setActiveSlideIndex(items.length);
-      setActiveIndex(0);
 
       const carouselBounds = carousel.getBoundingClientRect();
       const slideBounds = initialSlide.getBoundingClientRect();
@@ -149,7 +194,22 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
       }
       cancelScrollAnimation();
     };
-  }, [items.length]);
+  }, [cancelScrollAnimation, items.length]);
+
+  useEffect(() => {
+    if (isAutoplayPaused) return;
+
+    const autoplayInterval = setInterval(advanceSlide, 2150);
+
+    return () => clearInterval(autoplayInterval);
+  }, [advanceSlide, isAutoplayPaused]);
+
+  useEffect(
+    () => () => {
+      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    },
+    [],
+  );
 
   return (
     <>
@@ -159,10 +219,26 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
         aria-roledescription="carousel"
         aria-label={ariaLabel}
         className="mt-8 -my-10 overflow-x-auto overflow-y-hidden overscroll-x-contain py-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [scroll-behavior:auto] [touch-action:pan-x_pan-y]"
-        onScroll={(event) => updateActiveItem(event.currentTarget)}
-        onWheel={cancelScrollAnimation}
-        onTouchStart={cancelScrollAnimation}
-        onPointerDown={cancelScrollAnimation}
+        onScroll={(event) => {
+          updateActiveItem(event.currentTarget);
+          if (!isProgrammaticScrollRef.current) {
+            pauseAutoplay();
+            resumeAutoplayAfterInteraction();
+          }
+        }}
+        onWheel={() => {
+          cancelScrollAnimation();
+          pauseAutoplay();
+          resumeAutoplayAfterInteraction();
+        }}
+        onTouchStart={() => {
+          cancelScrollAnimation();
+          pauseAutoplay();
+        }}
+        onTouchEnd={resumeAutoplayAfterInteraction}
+        onPointerDown={() => {
+          cancelScrollAnimation();
+        }}
       >
         <div className="flex w-max min-w-full gap-4 px-[max(0px,calc((100%_-_320px)/2))] md:gap-6">
           {Array.from({ length: 3 }, (_, copyIndex) =>
@@ -191,7 +267,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                   >
                     <Card
                       className={cn(
-                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-500 ease-in-out",
+                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-[2150ms] ease-in-out",
                         isFeatured
                           ? "z-10 -translate-y-1 scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:scale-[1.03]"
                           : "scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
@@ -212,7 +288,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                       <CardContent className="relative p-6 sm:p-7">
                         <div
                           className={cn(
-                            "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-500 ease-in-out group-hover:scale-110",
+                            "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-[2150ms] ease-in-out group-hover:scale-110",
                             isFeatured ? "bg-gold text-zinc-950" : "bg-zinc-950 text-white",
                           )}
                         >
@@ -243,52 +319,6 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
               );
             }),
           )}
-        </div>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2" aria-label={`Choose a ${itemLabel}`}>
-          {items.map(({ title }, index) => (
-            <button
-              key={title}
-              type="button"
-              aria-label={`Show ${title} ${itemLabel}`}
-              aria-pressed={activeIndex === index}
-              onClick={() => centerSlide(items.length + index)}
-              className={cn(
-                "h-2.5 rounded-full transition-all duration-500 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                activeIndex === index ? "w-8 bg-primary" : "w-2.5 bg-zinc-300 hover:bg-zinc-400",
-              )}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <p className="hidden text-sm font-semibold text-zinc-500 sm:block" aria-live="polite">
-            <span className="text-zinc-950">{items[activeIndex].title}</span>
-            <span className="mx-2 text-zinc-300">/</span>
-            {`0${activeIndex + 1} / 0${items.length}`}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label={`Previous ${itemLabel}`}
-            onClick={() => centerSlide(activeSlideRef.current - 1)}
-            className="h-11 w-11 rounded-full"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label={`Next ${itemLabel}`}
-            onClick={() => centerSlide(activeSlideRef.current + 1)}
-            className="h-11 w-11 rounded-full"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
       </div>
     </>
