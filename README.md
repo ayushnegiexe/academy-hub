@@ -19,6 +19,25 @@ to enable admin change history for student profile and monthly fee updates. Then
 to audit trial-request changes and deletions, allow admins to delete trial, enrollment, and fee
 records, and keep the change history read-only. Deleting an enrolled trial request also deletes its
 linked enrollment and fee records; each deletion remains in Change history.
+Apply
+[`supabase/migrations/20261104180000_allow_reapproving_declined_trials.sql`](./supabase/migrations/20261104180000_allow_reapproving_declined_trials.sql)
+to let admins accept a previously declined trial request.
+
+## Academy assistant
+
+The floating assistant answers academy questions using only facts published on the website. It
+does not save chat messages in this application, does not ask for personal information, and sends
+questions to Google Gemini through the server-side `/api/chat` endpoint. It refuses unrelated
+questions and directs visitors to the academy phone number when details are not published.
+
+Set `ACADEMY_AI_API_KEY` to a Google AI Studio API key in the local server environment and as a
+server-only environment variable in Vercel. Do not use a `VITE_` prefix or put the key in client
+code. Restart/redeploy the server after setting it. The Vercel function is in `api/chat.ts`; use
+the Vercel CLI (`vercel dev`) for local end-to-end testing because Vite's `npm run dev` does not
+run Vercel functions. The assistant uses `gemini-2.5-flash`; update the model constant in
+`api/chat.ts` if your Google project does not have access to it.
+The application has basic per-instance request limiting; configure additional rate limiting at the
+hosting layer if public traffic requires stronger abuse protection.
 
 ## Admin approval SMS
 
