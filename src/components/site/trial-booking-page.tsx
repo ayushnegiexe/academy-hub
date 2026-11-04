@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -10,20 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/subpabase";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/trial")({
-  head: () => ({
-    meta: [
-      { title: "Book a Trial — Devsheel Football Academy" },
-      {
-        name: "description",
-        content: "Request a trial session at Devsheel Football Academy.",
-      },
-    ],
-  }),
-  component: TrialBookingPage,
-});
-
-function TrialBookingPage() {
+export function TrialBookingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

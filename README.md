@@ -12,5 +12,5 @@ To grant staff access:
 1. Create a staff user in Supabase Authentication.
 2. Add that user's Auth UUID and email to `public.academy_staff` using the
    Supabase SQL editor or dashboard. Do not expose this table to public signup.
-3. Staff sign in at `/staff`. Public trial requests are submitted at `/trial`;
+3. Staff sign in at `/staff`. Public trial requests are submitted at `/contact`;
    only approved requests can be converted into player enrollments.
