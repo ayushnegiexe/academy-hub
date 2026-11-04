@@ -3,7 +3,7 @@ import { ArrowUp, MessageSquare, Send, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 type ChatMessage = {
   role: "assistant" | "user";
@@ -12,14 +12,8 @@ type ChatMessage = {
 
 const initialMessage: ChatMessage = {
   role: "assistant",
-  text: "Welcome! I can help with age groups, trial requests, our training approach, and finding the academy. What can I help you with?",
+  text: "Hi! I can help with academy age groups, trial requests, training approach, and location. What would you like to know?",
 };
-
-const suggestedQuestions = [
-  "Which age groups do you train?",
-  "How do I book a trial?",
-  "Where is the academy?",
-];
 
 const ACADEMY_CONFIG = {
   announcement: {
@@ -54,7 +48,9 @@ export function FloatingWidgets() {
     });
   }, [messages, isSending]);
 
-  async function sendQuestion(question: string) {
+  async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = message.trim();
     if (!question || isSending) return;
 
     setMessages((current) => [...current, { role: "user", text: question }]);
@@ -94,11 +90,6 @@ export function FloatingWidgets() {
     } finally {
       setIsSending(false);
     }
-  }
-
-  function sendMessage(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void sendQuestion(message.trim());
   }
 
   return (
@@ -156,12 +147,9 @@ export function FloatingWidgets() {
                   <p className="text-sm font-black uppercase tracking-widest">
                     {ACADEMY_CONFIG.chat.title}
                   </p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-ink" />
-                    <p className="text-[11px] font-semibold opacity-75">
-                      {ACADEMY_CONFIG.chat.status}
-                    </p>
-                  </div>
+                  <p className="mt-1 text-[11px] font-semibold opacity-75">
+                    {ACADEMY_CONFIG.chat.status}
+                  </p>
                 </div>
               </div>
             </div>
@@ -170,15 +158,15 @@ export function FloatingWidgets() {
               ref={messageListRef}
               aria-live="polite"
               aria-label="Chat messages"
-              className="flex min-h-40 flex-1 flex-col gap-3 overflow-y-auto bg-gradient-to-b from-white/[0.03] to-transparent p-4"
+              className="flex min-h-40 flex-1 flex-col gap-3 overflow-y-auto p-4"
             >
               {messages.map((chatMessage, index) => (
                 <p
                   key={`${index}-${chatMessage.role}`}
-                  className={`max-w-[90%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                  className={`max-w-[90%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     chatMessage.role === "user"
-                      ? "self-end rounded-br-md bg-gold-gradient font-medium text-ink"
-                      : "self-start rounded-bl-md border border-white/10 bg-white/[0.08] text-white"
+                      ? "self-end rounded-br-md bg-gold-gradient text-ink"
+                      : "self-start rounded-bl-md bg-white/10 text-white"
                   }`}
                 >
                   {chatMessage.text}
@@ -189,72 +177,38 @@ export function FloatingWidgets() {
                   Thinking...
                 </p>
               )}
-              {messages.length === 1 && !isSending && (
-                <div className="mt-1 grid gap-2">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">
-                    Quick questions
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedQuestions.map((question) => (
-                      <button
-                        key={question}
-                        type="button"
-                        disabled={isSending}
-                        onClick={() => void sendQuestion(question)}
-                        className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-left text-xs font-medium text-white/85 transition-colors hover:border-gold/60 hover:bg-gold/10 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            <form onSubmit={sendMessage} className="border-t border-white/10 bg-black/10 p-4">
-              <div className="rounded-2xl border border-white/15 bg-white/[0.07] p-2 transition-colors focus-within:border-gold/60 focus-within:ring-2 focus-within:ring-gold/20">
-                <Textarea
+            <form onSubmit={sendMessage} className="space-y-3 border-t border-white/10 p-4">
+              <div className="flex gap-2">
+                <Input
                   aria-label="Your academy question"
-                  className="min-h-16 resize-none border-0 bg-transparent px-2 py-2 text-sm text-white shadow-none placeholder:text-white/45 focus-visible:ring-0"
-                  placeholder="Ask us about the academy..."
+                  className="min-w-0 border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-gold/50"
+                  placeholder="Ask an academy question..."
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   maxLength={600}
-                  rows={2}
                   required
                   disabled={isSending}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void sendQuestion(message.trim());
-                    }
-                  }}
                 />
-                <div className="flex items-center justify-between border-t border-white/10 px-1 pt-2">
-                  <span className="text-[10px] text-white/45">
-                    {message.length}/600 · Enter to send
-                  </span>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="h-9 rounded-xl bg-gold-gradient px-4 font-bold text-ink shadow-md transition-transform hover:scale-[1.02] hover:brightness-110"
-                    disabled={isSending || !message.trim()}
-                  >
-                    {isSending ? "Sending..." : "Send"}
-                    <Send className="ml-2 h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-3 text-[10px] leading-relaxed text-white/55">
-                Academy questions only. Don’t include children’s names, contact details, birthdates,
-                or health information.{" "}
-                <a
-                  className="font-semibold text-gold underline underline-offset-2"
-                  href="tel:+918218245579"
+                <Button
+                  type="submit"
+                  size="icon"
+                  aria-label="Send question"
+                  className="shrink-0 bg-gold-gradient text-ink hover:brightness-110"
+                  disabled={isSending || !message.trim()}
                 >
-                  Contact the academy
-                </a>
-                .
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/60">
+                Academy questions only. Messages are processed by Google Gemini and aren’t saved by
+                this website. Don’t include children’s names, contact details, birthdates, or health
+                information.{" "}
+                <a className="font-semibold text-gold underline" href="tel:+918218245579">
+                  Call us
+                </a>{" "}
+                if you need help.
               </p>
             </form>
           </PopoverContent>
