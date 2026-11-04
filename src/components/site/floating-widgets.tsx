@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
-import { MessageSquare, X, Send, ArrowUp, Calendar, Trophy, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, MessageSquare, Send, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 
-// Easy configuration for your academy alerts
+type ChatMessage = {
+  role: "assistant" | "user";
+  text: string;
+};
+
+const initialMessage: ChatMessage = {
+  role: "assistant",
+  text: "Hi! I can help with academy age groups, trial requests, training approach, and location. What would you like to know?",
+};
+
 const ACADEMY_CONFIG = {
   announcement: {
     title: "Now Training",
@@ -16,14 +23,17 @@ const ACADEMY_CONFIG = {
     link: "/contact",
   },
   chat: {
-    title: "Talk to a Coach",
-    status: "Coach online now",
-    online: true,
+    title: "Academy Assistant",
+    status: "Ask about Devsheel Academy",
   },
 };
 
 export function FloatingWidgets() {
   const [showTop, setShowTop] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400);
@@ -31,13 +41,60 @@ export function FloatingWidgets() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    messageListRef.current?.scrollTo({
+      top: messageListRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, isSending]);
+
+  async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = message.trim();
+    if (!question || isSending) return;
+
+    setMessages((current) => [...current, { role: "user", text: question }]);
+    setMessage("");
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: question }),
+      });
+      const result: unknown = await response.json();
+      const reply =
+        result &&
+        typeof result === "object" &&
+        "reply" in result &&
+        typeof result.reply === "string"
+          ? result.reply
+          : result &&
+              typeof result === "object" &&
+              "error" in result &&
+              typeof result.error === "string"
+            ? result.error
+            : "I couldn't get an answer just now. Please call +91 821 824 5579.";
+
+      setMessages((current) => [...current, { role: "assistant", text: reply }]);
+    } catch (error) {
+      console.error("Academy assistant request failed:", error);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          text: "I couldn't connect just now. Please call +91 821 824 5579.",
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
+  }
+
   return (
     <>
-
-
-      {/* 2. ACTION BUTTONS (Bottom Right) */}
       <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-4">
-        {/* Back to Top Button */}
         {showTop && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -49,87 +106,110 @@ export function FloatingWidgets() {
                 <ArrowUp className="h-5 w-5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="left" className="bg-black text-white border-white/10">
+            <TooltipContent side="left" className="border-white/10 bg-black text-white">
               Scroll up
             </TooltipContent>
           </Tooltip>
         )}
 
-        {/* Coach Chat Popover */}
         <Popover>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
-                <button className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gold-gradient text-ink shadow-[0_10px_30px_rgba(212,175,55,0.4)] transition-transform hover:scale-105 active:scale-95">
+                <button
+                  type="button"
+                  aria-label="Ask the academy assistant"
+                  className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gold-gradient text-ink shadow-[0_10px_30px_rgba(212,175,55,0.4)] transition-transform hover:scale-105 active:scale-95"
+                >
                   <MessageSquare className="h-7 w-7" />
-                  <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-crimson-deep bg-white text-[10px] font-black text-black">
-                    1
+                  <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-crimson-deep bg-white text-black">
+                    <Sparkles className="h-3 w-3" />
                   </span>
                 </button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side="left" className="bg-black text-white border-white/10">
-              Ask a Question
+            <TooltipContent side="left" className="border-white/10 bg-black text-white">
+              Ask the academy assistant
             </TooltipContent>
           </Tooltip>
 
           <PopoverContent
             side="top"
             align="end"
-            className="w-80 overflow-hidden rounded-[2rem] border-white/10 bg-crimson-deep p-0 shadow-2xl backdrop-blur-2xl"
+            className="flex max-h-[min(34rem,calc(100dvh-7rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.5rem] border-white/10 bg-crimson-deep p-0 text-white shadow-2xl backdrop-blur-2xl"
           >
-            {/* Popover Header */}
-            <div className="bg-gold-gradient p-6 text-ink">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
-                  <Calendar className="h-6 w-6" />
+            <div className="bg-gold-gradient p-5 text-ink">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md">
+                  <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-black uppercase tracking-widest leading-none">
+                  <p className="text-sm font-black uppercase tracking-widest">
                     {ACADEMY_CONFIG.chat.title}
                   </p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink" />
-                    <p className="text-[10px] font-bold opacity-70 italic">
-                      {ACADEMY_CONFIG.chat.status}
-                    </p>
-                  </div>
+                  <p className="mt-1 text-[11px] font-semibold opacity-75">
+                    {ACADEMY_CONFIG.chat.status}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                toast.success("Message sent! A coach will be in touch shortly.");
-                (e.target as any).reset();
-              }}
-              className="space-y-3 p-6"
+            <div
+              ref={messageListRef}
+              aria-live="polite"
+              aria-label="Chat messages"
+              className="flex min-h-40 flex-1 flex-col gap-3 overflow-y-auto p-4"
             >
-              <Input
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-gold/50"
-                placeholder="Name"
-                required
-              />
-              <Input
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-gold/50"
-                type="email"
-                placeholder="Email Address"
-                required
-              />
-              <Textarea
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-gold/50"
-                placeholder="How can we help?"
-                rows={3}
-                required
-              />
-              <Button
-                type="submit"
-                className="w-full bg-gold-gradient py-6 text-sm font-black uppercase tracking-widest text-ink hover:brightness-110"
-              >
-                Send Message <Send className="ml-2 h-4 w-4" />
-              </Button>
+              {messages.map((chatMessage, index) => (
+                <p
+                  key={`${index}-${chatMessage.role}`}
+                  className={`max-w-[90%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    chatMessage.role === "user"
+                      ? "self-end rounded-br-md bg-gold-gradient text-ink"
+                      : "self-start rounded-bl-md bg-white/10 text-white"
+                  }`}
+                >
+                  {chatMessage.text}
+                </p>
+              ))}
+              {isSending && (
+                <p className="self-start rounded-2xl rounded-bl-md bg-white/10 px-3 py-2 text-sm text-white/70">
+                  Thinking...
+                </p>
+              )}
+            </div>
+
+            <form onSubmit={sendMessage} className="space-y-3 border-t border-white/10 p-4">
+              <div className="flex gap-2">
+                <Input
+                  aria-label="Your academy question"
+                  className="min-w-0 border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-gold/50"
+                  placeholder="Ask an academy question..."
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  maxLength={600}
+                  required
+                  disabled={isSending}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  aria-label="Send question"
+                  className="shrink-0 bg-gold-gradient text-ink hover:brightness-110"
+                  disabled={isSending || !message.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/60">
+                Academy questions only. Messages are processed by Google Gemini and aren’t saved by
+                this website. Don’t include children’s names, contact details, birthdates, or health
+                information.{" "}
+                <a className="font-semibold text-gold underline" href="tel:+918218245579">
+                  Call us
+                </a>{" "}
+                if you need help.
+              </p>
             </form>
           </PopoverContent>
         </Popover>

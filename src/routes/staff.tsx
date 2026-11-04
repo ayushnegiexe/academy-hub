@@ -388,7 +388,9 @@ function AdminPage() {
     const { error } = await supabase.rpc("review_trial_request", {
       p_trial_request_id: request.id,
       p_status: status,
-      p_staff_notes: adminNotes[request.id]?.trim() || null,
+      p_staff_notes:
+        adminNotes[request.id]?.trim() ||
+        (request.status === "rejected" ? request.staff_notes : null),
     });
 
     if (error) {
@@ -1041,6 +1043,16 @@ function AdminPage() {
                       </Button>
                     </div>
                   </div>
+                )}
+
+                {request.status === "rejected" && (
+                  <Button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => setPendingConfirmation({ kind: "trial-approval", request })}
+                  >
+                    Accept request
+                  </Button>
                 )}
 
                 {request.status === "approved" && (
