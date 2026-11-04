@@ -345,7 +345,7 @@ function TheCoach() {
       >
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-zinc-950 to-transparent md:w-32" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-zinc-950 to-transparent md:w-32" />
-        <div className="flex w-max animate-marquee motion-reduce:w-full motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:animate-none">
+        <div className="flex w-max animate-marquee">
           {[0, 1].map((copy) => (
             <div
               key={copy}
