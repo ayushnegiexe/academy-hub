@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -138,7 +139,7 @@ function getApprovalSmsMessage(request: TrialRequest) {
   return (
     `Hello ${request.guardian_name}, ${request.player_name}'s ${request.age_group} trial request ` +
     `has been approved. Please visit Devsheel Football Academy at ${academyAddress}. ` +
-    "For session details, contact the academy admin at hello@devsheel.fc. Thank you."
+    "For any further queries, contact us at +91 821 824 5579. Thank you."
   );
 }
 
@@ -150,6 +151,53 @@ function getApprovalSmsLink(request: TrialRequest) {
   if (!/^\+?\d{7,15}$/.test(phone)) return null;
 
   return `sms:${phone}&body=${encodeURIComponent(getApprovalSmsMessage(request))}`;
+}
+
+function showTrialReviewToast(
+  status: "approved" | "rejected",
+  playerName: string,
+  smsStatus: "opened" | "link-available" | "unavailable",
+) {
+  const isApproved = status === "approved";
+  toast.custom(
+    (id) => (
+      <div
+        role="status"
+        className="flex w-[min(26rem,calc(100vw-2rem))] items-start gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xl"
+      >
+        <div
+          className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+            isApproved ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {isApproved ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">
+            {isApproved ? "Trial request approved" : "Trial request declined"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isApproved
+              ? smsStatus === "opened"
+                ? `${playerName}'s approval text is open in Messages. Review it and tap Send.`
+                : smsStatus === "link-available"
+                  ? `${playerName}'s request is approved. Use the approval-text link on the request to open Messages.`
+                  : `${playerName}'s request is approved, but the guardian number could not be opened in Messages.`
+              : `${playerName}'s request has been updated. The guardian has not been messaged.`}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Dismiss notification"
+          onClick={() => toast.dismiss(id)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    ),
+    { duration: 6000 },
+  );
 }
 
 export const Route = createFileRoute("/staff")({
@@ -373,18 +421,14 @@ function AdminPage() {
         const smsLink = getApprovalSmsLink(request);
         if (smsWindow && smsLink) {
           smsWindow.location.href = smsLink;
-          toast.success("Trial approved. Tap Send in Messages to send the text.");
+          showTrialReviewToast("approved", request.player_name, "opened");
         } else if (smsLink) {
-          toast.warning(
-            "Trial approved. Use the approval-text link on the request to open Messages.",
-          );
+          showTrialReviewToast("approved", request.player_name, "link-available");
         } else {
-          toast.warning(
-            "Trial approved, but the guardian phone number is not valid for an SMS link.",
-          );
+          showTrialReviewToast("approved", request.player_name, "unavailable");
         }
       } else {
-        toast.success("Trial declined");
+        showTrialReviewToast("rejected", request.player_name, "unavailable");
         await refreshRequests();
       }
     }
