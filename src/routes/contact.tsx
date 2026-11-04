@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
       { title: "Contact — Devsheel Football Academy" },
-      { name: "description", content: "Visit Devsheel Football Academy, book a trial, or send a message to our team." },
+      { name: "description", content: "Visit Devsheel Football Academy or send a message to our team." },
     ],
   }),
   component: ContactPage,
@@ -87,7 +87,13 @@ function ContactPage() {
         <Card className="border-border shadow-lift">
           <CardContent className="p-6 md:p-8">
             <h2 className="font-display text-3xl uppercase">Send a message</h2>
-            <p className="mt-1 text-sm text-muted-foreground font-medium">Capture your spot for a trial session.</p>
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
+              For a player trial, use our{" "}
+              <Link to={"/trial" as any} className="text-primary underline">
+                trial booking form
+              </Link>
+              . For other questions, send us a message here.
+            </p>
             
             <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">

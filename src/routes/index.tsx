@@ -127,8 +127,8 @@ function Hero() {
             size="lg"
             className="rounded-full bg-gold-gradient px-10 text-base font-black uppercase tracking-widest text-ink shadow-gold hover:scale-105 transition-all"
           >
-            <Link to={"/contact" as any}>
-              Contact <ArrowRight className="ml-2 h-4 w-4" />
+            <Link to={"/trial" as any}>
+              Book a trial <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
 

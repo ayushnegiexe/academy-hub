@@ -88,7 +88,7 @@ function ProgramsPage() {
               <p className="mt-3 max-w-lg text-white/85">Get in touch and we'll share session times, location and how to get your player involved.</p>
             </div>
             <Button asChild size="lg" className="rounded-full bg-gold-gradient text-ink hover:brightness-110">
-              <Link to="/contact">Contact us <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link to="/trial">Book a trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
         </div>
