@@ -299,8 +299,8 @@ function TrainingGroups() {
 /* ---------------- THE COACH ---------------- */
 function TheCoach() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-24 md:px-6">
-      <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+    <section className="py-24">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 md:px-6 lg:grid-cols-2 lg:items-center">
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[2rem] bg-hero-gradient shadow-lift border border-white/10">
           <div className="absolute inset-0 pitch-lines opacity-[0.12]" aria-hidden />
           <div className="absolute inset-0 bg-black/25" aria-hidden />
@@ -350,7 +350,7 @@ function TheCoach() {
             <div
               key={copy}
               aria-hidden={copy === 1}
-              className="flex shrink-0 items-center gap-8 pr-8 md:gap-12 md:pr-12"
+              className="flex min-w-[100vw] shrink-0 items-center justify-around gap-8 md:gap-12"
             >
               {[
                 "Coaching with purpose",
