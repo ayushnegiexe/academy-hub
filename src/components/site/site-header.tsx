@@ -93,7 +93,7 @@ export function SiteHeader() {
             asChild
             className="group bg-gold-gradient font-bold text-ink hover:brightness-110"
           >
-            <Link to={"/trial" as any} className="flex items-center gap-2">
+            <Link to={"/contact" as any} className="flex items-center gap-2">
               Book a trial{" "}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
@@ -151,7 +151,7 @@ export function SiteHeader() {
               asChild
               className="mt-4 bg-gold-gradient py-7 text-ink font-bold uppercase tracking-widest"
             >
-              <Link to={"/trial" as any}>Book a trial</Link>
+              <Link to={"/contact" as any}>Book a trial</Link>
             </Button>
           </div>
         </div>
