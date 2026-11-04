@@ -53,5 +53,5 @@ To grant admin access:
 2. Add that user's Auth UUID and email to `public.academy_staff` using the
    Supabase SQL editor or dashboard. This is the existing database table used for admin
    access; do not expose it to public signup.
-3. Admins sign in at `/staff`. Public trial requests are submitted at `/contact`;
+3. Admins sign in at `/admin`. Public trial requests are submitted at `/contact`;
    only approved requests can be converted into player enrollments.
