@@ -226,11 +226,6 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
             resumeAutoplayAfterInteraction();
           }
         }}
-        onWheel={() => {
-          cancelScrollAnimation();
-          pauseAutoplay();
-          resumeAutoplayAfterInteraction();
-        }}
         onTouchStart={() => {
           cancelScrollAnimation();
           pauseAutoplay();
