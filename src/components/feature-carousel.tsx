@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -17,20 +18,13 @@ type FeatureCarouselProps = {
 
 export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarouselProps) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(items.length);
-  const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const activeSlideRef = useRef(items.length);
   const isProgrammaticScrollRef = useRef(false);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeUpdateFrameRef = useRef<number | null>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
-
-  const pauseAutoplay = () => {
-    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
-    setIsAutoplayPaused(true);
-  };
 
   const cancelScrollAnimation = useCallback(() => {
     if (scrollAnimationFrameRef.current !== null) {
@@ -56,11 +50,12 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
         slideBounds.width / 2 -
         carousel.clientWidth / 2;
       const distance = targetLeft - startLeft;
-      const duration = 2150;
+      const duration = 700;
       let startTime: number | null = null;
 
       cancelScrollAnimation();
       isProgrammaticScrollRef.current = true;
+      activeSlideRef.current = index;
       setActiveSlideIndex(index);
 
       const animate = (time: number) => {
@@ -102,19 +97,10 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
   );
 
   const advanceSlide = useCallback(() => {
-    if (document.visibilityState !== "visible") return;
+    if (items.length < 2) return;
     const nextIndex = activeSlideRef.current + 1;
     centerSlide(nextIndex < items.length * 3 ? nextIndex : items.length);
   }, [centerSlide, items.length]);
-
-  const resumeAutoplayAfterInteraction = () => {
-    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
-    interactionTimeoutRef.current = setTimeout(() => {
-      setIsAutoplayPaused(false);
-      interactionTimeoutRef.current = null;
-      advanceSlide();
-    }, 1750);
-  };
 
   const updateActiveItem = (carousel: HTMLDivElement) => {
     if (isProgrammaticScrollRef.current) return;
@@ -197,19 +183,21 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
   }, [cancelScrollAnimation, items.length]);
 
   useEffect(() => {
-    if (isAutoplayPaused) return;
+    if (items.length < 2) return;
 
-    const autoplayInterval = setInterval(advanceSlide, 2150);
+    const autoplayInterval = setInterval(() => {
+      if (document.visibilityState === "visible") advanceSlide();
+    }, 4000);
 
     return () => clearInterval(autoplayInterval);
-  }, [advanceSlide, isAutoplayPaused]);
+  }, [advanceSlide, items.length]);
 
-  useEffect(
-    () => () => {
-      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
-    },
-    [],
-  );
+  const navigateSlide = (direction: -1 | 1) => {
+    if (items.length < 2) return;
+
+    const nextIndex = activeSlideRef.current + direction;
+    centerSlide(nextIndex < 0 ? items.length * 2 - 1 : nextIndex);
+  };
 
   return (
     <>
@@ -221,16 +209,10 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
         className="mt-8 -my-10 overflow-x-auto overflow-y-hidden overscroll-x-contain py-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [scroll-behavior:auto] [touch-action:pan-x_pan-y]"
         onScroll={(event) => {
           updateActiveItem(event.currentTarget);
-          if (!isProgrammaticScrollRef.current) {
-            pauseAutoplay();
-            resumeAutoplayAfterInteraction();
-          }
         }}
         onTouchStart={() => {
           cancelScrollAnimation();
-          pauseAutoplay();
         }}
-        onTouchEnd={resumeAutoplayAfterInteraction}
         onPointerDown={() => {
           cancelScrollAnimation();
         }}
@@ -262,7 +244,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                   >
                     <Card
                       className={cn(
-                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-[2150ms] ease-in-out",
+                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-700 ease-in-out",
                         isFeatured
                           ? "z-10 -translate-y-1 scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:scale-[1.03]"
                           : "scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
@@ -283,7 +265,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                       <CardContent className="relative p-6 sm:p-7">
                         <div
                           className={cn(
-                            "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-[2150ms] ease-in-out group-hover:scale-110",
+                            "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-700 ease-in-out group-hover:scale-110",
                             isFeatured ? "bg-gold text-zinc-950" : "bg-zinc-950 text-white",
                           )}
                         >
@@ -315,6 +297,47 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
             }),
           )}
         </div>
+      </div>
+      <div
+        className="mt-5 flex items-center justify-center gap-3"
+        aria-label={`${ariaLabel} controls`}
+      >
+        <button
+          type="button"
+          onClick={() => navigateSlide(-1)}
+          aria-label={`Previous ${itemLabel}`}
+          disabled={items.length < 2}
+          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-zinc-950 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2" role="group" aria-label={`Choose ${itemLabel}`}>
+          {items.map((item, index) => {
+            const isActive = activeSlideIndex % items.length === index;
+            return (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => centerSlide(items.length + index)}
+                aria-label={`Show ${item.title} ${itemLabel}`}
+                aria-current={isActive ? "true" : undefined}
+                className={cn(
+                  "h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                  isActive ? "w-7 bg-gold" : "w-2.5 bg-zinc-300 hover:bg-zinc-500",
+                )}
+              />
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={() => navigateSlide(1)}
+          aria-label={`Next ${itemLabel}`}
+          disabled={items.length < 2}
+          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-zinc-950 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ChevronRight aria-hidden="true" className="h-5 w-5" />
+        </button>
       </div>
     </>
   );

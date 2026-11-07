@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import type { UseEmblaCarouselType } from "embla-carousel-react";
 import {
   Heart,
   Compass,
@@ -46,7 +48,6 @@ import duelBall from "@/assets/duel-ball.jpg";
 import runningPair from "@/assets/running-pair.jpg";
 import sessionGround from "@/assets/session-ground.jpg";
 import playerKit from "@/assets/player-kit.jpg";
-
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -113,12 +114,49 @@ const VALUES = [
   { icon: Trophy, title: "Excellence", desc: "Chase mastery, not just the scoreline." },
 ];
 
+type CarouselApi = UseEmblaCarouselType[1];
+
 function AboutPage() {
+  const [galleryApi, setGalleryApi] = useState<CarouselApi | null>(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const setGalleryCarouselApi = useCallback((api: CarouselApi) => {
+    setGalleryApi(api);
+  }, []);
+
+  useEffect(() => {
+    if (!galleryApi) return;
+
+    const updateActivePhoto = () => setActivePhotoIndex(galleryApi.selectedScrollSnap());
+    updateActivePhoto();
+    galleryApi.on("select", updateActivePhoto);
+    galleryApi.on("reInit", updateActivePhoto);
+
+    return () => {
+      galleryApi.off("select", updateActivePhoto);
+      galleryApi.off("reInit", updateActivePhoto);
+    };
+  }, [galleryApi]);
+
+  useEffect(() => {
+    if (!galleryApi || galleryApi.scrollSnapList().length < 2) return;
+
+    const autoplayInterval = setInterval(() => {
+      if (document.visibilityState === "visible") galleryApi.scrollNext();
+    }, 4000);
+
+    return () => clearInterval(autoplayInterval);
+  }, [galleryApi]);
+
   return (
     <>
       {/* HERO WITH PHOTO */}
       <section className="relative overflow-hidden py-28 text-white">
-        <img src={matchWide} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={matchWide}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+        />
         <div className="absolute inset-0 bg-hero-gradient opacity-80" aria-hidden />
         <div className="absolute inset-0 bg-black/45" aria-hidden />
         <div className="absolute inset-0 pitch-lines opacity-25" aria-hidden />
@@ -132,8 +170,8 @@ function AboutPage() {
             <span className="shine-text">Powered by belief.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg font-medium text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
-            A young grassroots academy training four age groups — U10, U12, U15 and U18. No shortcuts,
-            no gimmicks: just sessions, matches and steady work on the basics.
+            A young grassroots academy training four age groups — U10, U12, U15 and U18. No
+            shortcuts, no gimmicks: just sessions, matches and steady work on the basics.
           </p>
         </div>
       </section>
@@ -159,12 +197,13 @@ function AboutPage() {
             A young academy, done properly.
           </h2>
           <p className="mt-4 text-muted-foreground font-medium">
-            Devsheel is new. We don't claim trophies we haven't won or facilities we don't have. What we
-            do have is a proper ground, a full session plan and a coach who is at every training.
+            Devsheel is new. We don't claim trophies we haven't won or facilities we don't have.
+            What we do have is a proper ground, a full session plan and a coach who is at every
+            training.
           </p>
           <p className="mt-3 text-muted-foreground font-medium">
-            We play friendlies and local tournaments when they come up, and the rest of the time we work
-            on first touch, movement, decisions and behaviour.
+            We play friendlies and local tournaments when they come up, and the rest of the time we
+            work on first touch, movement, decisions and behaviour.
           </p>
           <div className="mt-6 flex gap-3">
             <Button asChild className="rounded-full">
@@ -188,16 +227,15 @@ function AboutPage() {
             </Badge>
             <h2 className="font-display text-4xl uppercase md:text-5xl">The Devsheel Code.</h2>
           </div>
-          <FeatureCarousel
-            items={VALUES}
-            ariaLabel="The Devsheel Code values"
-            itemLabel="value"
-          />
+          <FeatureCarousel items={VALUES} ariaLabel="The Devsheel Code values" itemLabel="value" />
         </div>
       </section>
 
       {/* TOURNAMENT SECTION */}
-      <section id="tournament" className="relative overflow-hidden bg-hero-gradient py-20 text-white scroll-mt-24">
+      <section
+        id="tournament"
+        className="relative overflow-hidden bg-hero-gradient py-20 text-white scroll-mt-24"
+      >
         <div className="absolute inset-0 pitch-lines opacity-25" aria-hidden />
         <div className="absolute inset-0 bg-black/40" aria-hidden />
         <div className="relative mx-auto max-w-7xl px-4 md:px-6">
@@ -229,15 +267,19 @@ function AboutPage() {
               <PopoverContent className="w-72 border-zinc-800 bg-zinc-950 text-white">
                 <p className="font-display text-lg uppercase text-gold">Away tournament</p>
                 <p className="mt-1 text-xs text-white/70">
-                  Taken at a tournament venue we were invited to. Our own academy ground gets its own
-                  section below once the photos are ready.
+                  Taken at a tournament venue we were invited to. Our own academy ground gets its
+                  own section below once the photos are ready.
                 </p>
               </PopoverContent>
             </Popover>
           </div>
 
           {/* Carousel of tournament photos */}
-          <Carousel opts={{ align: "start", loop: true }} className="mt-12">
+          <Carousel
+            opts={{ align: "start", loop: true }}
+            setApi={setGalleryCarouselApi}
+            className="mt-12"
+          >
             <CarouselContent className="-ml-4">
               {tournamentPhotos.map((g, i) => (
                 <CarouselItem key={g.caption} className="pl-4 sm:basis-1/2 lg:basis-1/3">
@@ -284,6 +326,28 @@ function AboutPage() {
             <CarouselPrevious className="border-gold/50 bg-white/10 text-white hover:bg-white/20" />
             <CarouselNext className="border-gold/50 bg-white/10 text-white hover:bg-white/20" />
           </Carousel>
+          {galleryApi && galleryApi.scrollSnapList().length > 1 && (
+            <div
+              className="mt-6 flex justify-center gap-2"
+              role="group"
+              aria-label="Choose tournament photo"
+            >
+              {galleryApi.scrollSnapList().map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => galleryApi.scrollTo(index)}
+                  aria-label={`Show tournament photo ${index + 1}`}
+                  aria-current={activePhotoIndex === index ? "true" : undefined}
+                  className={`h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
+                    activePhotoIndex === index
+                      ? "w-7 bg-gold"
+                      : "w-2.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Dynamic widget: tabbed tournament notes */}
           <Tabs defaultValue="format" className="mt-14">
@@ -314,8 +378,8 @@ function AboutPage() {
               className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
             >
               <p className="text-sm text-white/85">
-                Sharper first touch under pressure and calmer decisions in tight areas — the next block
-                of sessions is built around it.
+                Sharper first touch under pressure and calmer decisions in tight areas — the next
+                block of sessions is built around it.
               </p>
             </TabsContent>
           </Tabs>
@@ -341,8 +405,10 @@ function AboutPage() {
               {[
                 {
                   icon: MapPin,
-                  label: "Location — Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007",
-                  tooltip: "The Devsheel academy ground is at Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007.",
+                  label:
+                    "Location — Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007",
+                  tooltip:
+                    "The Devsheel academy ground is at Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007.",
                 },
                 { icon: Ruler, label: "Pitch size — TBA", tooltip: "Details to be confirmed." },
                 { icon: Goal, label: "Goals — TBA", tooltip: "Details to be confirmed." },
@@ -418,7 +484,6 @@ function AboutPage() {
           </div>
         </div>
       </section>
-
     </>
   );
 }
