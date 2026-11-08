@@ -27,6 +27,7 @@ import u10Img from "@/assets/under_10.jpg";
 import u12Img from "@/assets/under_12.jpg";
 import u15Img from "@/assets/group-u15.jpg";
 import u18Img from "@/assets/under_18.jpg";
+import coachPortrait from "@/assets/coach-portrait.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -320,17 +321,22 @@ function TrainingGroups() {
 function TheCoach() {
   return (
     <section className="py-24">
-      <div className="mx-auto grid max-w-7xl gap-12 px-4 md:px-6 lg:grid-cols-2 lg:items-center">
+      <div className="mx-auto grid max-w-3xl gap-8 px-4 md:px-6">
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[2rem] bg-hero-gradient shadow-lift border border-white/10">
           <div className="absolute inset-0 pitch-lines opacity-[0.12]" aria-hidden />
           <div className="absolute inset-0 bg-black/25" aria-hidden />
           <img
             src={logo}
             alt="Devsheel Football Academy"
-            className="relative z-10 w-4/5 max-w-md drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+            className="absolute right-6 top-8 z-10 w-[42%] max-w-xs drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)] sm:right-8 sm:top-10"
+          />
+          <img
+            src={coachPortrait}
+            alt="Devsheel Football Academy head coach"
+            className="absolute bottom-0 left-0 z-20 h-[88%] w-[58%] object-contain object-bottom drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
           />
 
-          <div className="absolute bottom-6 right-6 z-10 rounded-2xl bg-gold-gradient px-6 py-4 text-ink shadow-xl">
+          <div className="absolute bottom-6 right-6 z-30 rounded-2xl bg-gold-gradient px-6 py-4 text-ink shadow-xl">
             <p className="font-display text-[10px] uppercase tracking-[0.3em] font-black">
               Founder
             </p>
