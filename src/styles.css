@@ -101,15 +101,60 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
+  * {
+    box-sizing: border-box;
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0.01em; }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+    line-height: 0.98;
+  }
+  img, video, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  a, button, input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  p, li, span, button, input, textarea, select {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 767px) {
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    text-size-adjust: 100%;
+  }
+
+  h1, h2, h3, h4 {
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  [class*="text-5xl"],
+  [class*="text-6xl"],
+  [class*="text-7xl"],
+  [class*="text-8xl"],
+  [class*="text-4xl"] {
+    overflow-wrap: anywhere;
+  }
 }
 
 @utility text-gradient-gold {

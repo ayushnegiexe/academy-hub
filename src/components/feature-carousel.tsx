@@ -244,10 +244,10 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                   >
                     <Card
                       className={cn(
-                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-700 ease-in-out",
+                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-700 ease-in-out will-change-transform",
                         isFeatured
-                          ? "z-10 -translate-y-1 scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:scale-[1.03]"
-                          : "scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
+                          ? "z-10 -translate-y-1 translate-x-4 rotate-[1.5deg] scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:translate-x-6 sm:scale-[1.03]"
+                          : "translate-x-0 rotate-0 scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
                       )}
                     >
                       {isFeatured && (

@@ -28,6 +28,7 @@ import u12Img from "@/assets/under_12.jpg";
 import u15Img from "@/assets/group-u15.jpg";
 import u18Img from "@/assets/under_18.jpg";
 import coachPortrait from "@/assets/coach-portrait.png";
+import headCoachBackground from "@/assets/head-coach-background.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -285,7 +286,7 @@ function TrainingGroups() {
                 <img
                   src={g.img}
                   alt={`${g.title} training`}
-                  className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
+                  className="h-full w-full object-contain"
                 />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-crimson-deep to-transparent" />
                 <div className="absolute left-6 top-6 rounded-full bg-gold-gradient px-4 py-1.5 text-xs font-black uppercase tracking-widest text-ink shadow-gold">
@@ -322,25 +323,29 @@ function TheCoach() {
   return (
     <section className="py-24">
       <div className="mx-auto grid max-w-3xl gap-8 px-4 md:px-6">
-        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[2rem] bg-hero-gradient shadow-lift border border-white/10">
-          <div className="absolute inset-0 pitch-lines opacity-[0.12]" aria-hidden />
-          <div className="absolute inset-0 bg-black/25" aria-hidden />
+        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#4b070c] shadow-lift">
+          <img
+            src={headCoachBackground}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
           <img
             src={logo}
             alt="Devsheel Football Academy"
-            className="absolute right-6 top-8 z-10 w-[42%] max-w-xs drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)] sm:right-8 sm:top-10"
+            className="absolute right-3 top-4 z-10 w-[38%] max-w-xs drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)] sm:right-6 sm:top-8 md:right-8 md:top-10"
           />
           <img
             src={coachPortrait}
             alt="Devsheel Football Academy head coach"
-            className="absolute bottom-0 left-0 z-20 h-[88%] w-[58%] object-contain object-bottom drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+            className="absolute bottom-0 left-0 z-20 h-[76%] w-[56%] object-contain object-bottom drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:h-[82%] sm:w-[58%] md:h-[88%]"
           />
 
-          <div className="absolute bottom-6 right-6 z-30 rounded-2xl bg-gold-gradient px-6 py-4 text-ink shadow-xl">
-            <p className="font-display text-[10px] uppercase tracking-[0.3em] font-black">
+          <div className="absolute bottom-4 right-4 z-30 rounded-2xl bg-gold-gradient px-4 py-3 text-ink shadow-xl sm:bottom-6 sm:right-6 sm:px-6 sm:py-4">
+            <p className="font-display text-[9px] font-black uppercase tracking-[0.25em] sm:text-[10px] sm:tracking-[0.3em]">
               Founder
             </p>
-            <p className="font-display text-2xl uppercase">Head Coach</p>
+            <p className="font-display text-lg uppercase sm:text-2xl">Head Coach</p>
           </div>
         </div>
         <div>
