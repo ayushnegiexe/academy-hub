@@ -9,10 +9,8 @@ import {
   Users,
   Mail,
   Phone,
-  Play,
-  Pause,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,29 +58,16 @@ function HomePage() {
 
 /* ---------------- HERO (VIDEO BACKGROUND VERSION) ---------------- */
 function Hero() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
-
   const scrollToTraining = () => {
     const el = document.getElementById("training");
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  const toggleVideoPlayback = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (video.paused) {
-      void video.play().catch((error: unknown) => {
-        console.error("Could not resume the homepage hero video.", error);
-      });
-    } else {
-      video.pause();
-    }
-  };
-
   return (
-    <section className="relative -mt-[76px] h-[100svh] min-h-[600px] w-full overflow-hidden bg-black text-white">
+    <section
+      id="home-hero"
+      className="relative -mt-[76px] h-[100svh] min-h-[600px] w-full overflow-hidden bg-black text-white"
+    >
       {/* BACKGROUND VIDEO LAYER */}
       <div className="absolute inset-0 z-0">
         {/* Poster fallback */}
@@ -95,15 +80,12 @@ function Hero() {
 
         {/* Full-bleed video keeps the hero covered across screen sizes and aspect ratios. */}
         <video
-          ref={videoRef}
           autoPlay
           loop
           muted
           playsInline
           preload="metadata"
           poster={heroImg}
-          onPlay={() => setIsVideoPlaying(true)}
-          onPause={() => setIsVideoPlaying(false)}
           className="absolute inset-0 h-full w-full object-cover brightness-110"
         >
           <source src="/academy-hero.mp4" type="video/mp4" />
@@ -156,17 +138,6 @@ function Hero() {
           </Button>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={toggleVideoPlayback}
-        aria-label={isVideoPlaying ? "Pause background video" : "Play background video"}
-        aria-pressed={!isVideoPlaying}
-        className="absolute bottom-6 right-6 z-20 inline-flex items-center gap-2 rounded-full border border-white/40 bg-black/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-md transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold md:bottom-8 md:right-8"
-      >
-        {isVideoPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-        {isVideoPlaying ? "Pause video" : "Play video"}
-      </button>
     </section>
   );
 }

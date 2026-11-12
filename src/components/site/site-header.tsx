@@ -19,14 +19,38 @@ const NAV = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const isHomePage = currentPath === "/";
 
   useEffect(() => setOpen(false), [currentPath]);
 
+  useEffect(() => {
+    const updateScrollState = () => {
+      const homeHero = document.getElementById("home-hero");
+      const threshold = homeHero ? homeHero.getBoundingClientRect().height / 5 : 24;
+      setIsScrolled(window.scrollY > threshold);
+    };
+    updateScrollState();
+    window.addEventListener("scroll", updateScrollState, { passive: true });
+
+    return () => window.removeEventListener("scroll", updateScrollState);
+  }, [currentPath]);
+
+  const isTransparent = isHomePage && !isScrolled && !open;
+
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-white/10 bg-crimson-deep/95 py-3 shadow-lg backdrop-blur-xl">
-      <div className="absolute inset-0 -z-10 bg-hero-gradient opacity-95" aria-hidden />
+    <header
+      className={`sticky top-0 z-[100] w-full py-3 transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+        isTransparent
+          ? "border-b border-transparent bg-transparent shadow-none backdrop-blur-none"
+          : "border-b border-white/10 bg-crimson-deep/95 shadow-lg backdrop-blur-xl"
+      }`}
+    >
+      {!isTransparent && (
+        <div className="absolute inset-0 -z-10 bg-hero-gradient opacity-95" aria-hidden />
+      )}
 
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 md:px-6">
         <Link
