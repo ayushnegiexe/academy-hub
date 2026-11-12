@@ -39,7 +39,7 @@ export function SiteFooter() {
           <ul className="mt-6 space-y-4 text-sm font-bold text-white/50">
             <li>
               <Link to={"/about" as any} className="hover:text-white transition-colors">
-                Academy
+                About Us
               </Link>
             </li>
             <li>

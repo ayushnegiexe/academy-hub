@@ -6,8 +6,55 @@ import { cn } from "@/lib/utils";
 
 type FeatureCarouselItem = {
   icon: LucideIcon;
+  motion: "target" | "zap" | "heart" | "shield" | "compass" | "users" | "trophy";
   title: string;
   desc: string;
+};
+
+const ICON_MOTION_KEYFRAMES: Record<FeatureCarouselItem["motion"], Keyframe[]> = {
+  target: [
+    { transform: "scale(0.65) rotate(-25deg)" },
+    { transform: "scale(1.2) rotate(8deg)", offset: 0.55 },
+    { transform: "scale(1) rotate(0deg)" },
+  ],
+  zap: [
+    { transform: "translate(0) scale(0.8)", opacity: 0.6 },
+    { transform: "translate(2px, -3px) scale(1.25)", opacity: 1, offset: 0.3 },
+    { transform: "translate(-2px, 1px) scale(0.95)", offset: 0.55 },
+    { transform: "translate(0) scale(1)" },
+  ],
+  heart: [
+    { transform: "scale(1)" },
+    { transform: "scale(1.22)", offset: 0.25 },
+    { transform: "scale(0.96)", offset: 0.45 },
+    { transform: "scale(1.14)", offset: 0.65 },
+    { transform: "scale(1)" },
+  ],
+  shield: [
+    { transform: "rotate(0) translateY(0)" },
+    { transform: "rotate(-14deg) translateY(-2px)", offset: 0.25 },
+    { transform: "rotate(10deg) translateY(-3px)", offset: 0.55 },
+    { transform: "rotate(-5deg)", offset: 0.75 },
+    { transform: "rotate(0) translateY(0)" },
+  ],
+  compass: [
+    { transform: "rotate(-90deg) scale(0.8)" },
+    { transform: "rotate(18deg) scale(1.12)", offset: 0.65 },
+    { transform: "rotate(0) scale(1)" },
+  ],
+  users: [
+    { transform: "translateY(0) scale(1)" },
+    { transform: "translateY(-5px) scale(1.08)", offset: 0.35 },
+    { transform: "translateY(1px) scale(0.96)", offset: 0.65 },
+    { transform: "translateY(0) scale(1)" },
+  ],
+  trophy: [
+    { transform: "translateY(0) rotate(0)" },
+    { transform: "translateY(-6px) rotate(-8deg)", offset: 0.35 },
+    { transform: "translateY(1px) rotate(5deg)", offset: 0.6 },
+    { transform: "translateY(-2px) rotate(-2deg)", offset: 0.8 },
+    { transform: "translateY(0) rotate(0)" },
+  ],
 };
 
 type FeatureCarouselProps = {
@@ -20,11 +67,30 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
   const [activeSlideIndex, setActiveSlideIndex] = useState(items.length);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const iconRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const activeSlideRef = useRef(items.length);
+  const iconAnimationRef = useRef<Animation | null>(null);
   const isProgrammaticScrollRef = useRef(false);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeUpdateFrameRef = useRef<number | null>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    iconAnimationRef.current?.cancel();
+    const activeIcon = iconRefs.current[activeSlideIndex];
+    const motion = items[activeSlideIndex % items.length]?.motion;
+    if (!activeIcon || !motion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    iconAnimationRef.current = activeIcon.animate(ICON_MOTION_KEYFRAMES[motion], {
+      duration: 1200,
+      easing: "ease-out",
+      iterations: Number.POSITIVE_INFINITY,
+    });
+
+    return () => iconAnimationRef.current?.cancel();
+  }, [activeSlideIndex, items]);
 
   const cancelScrollAnimation = useCallback(() => {
     if (scrollAnimationFrameRef.current !== null) {
@@ -244,10 +310,10 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                   >
                     <Card
                       className={cn(
-                        "group relative h-full overflow-hidden border transition-[transform,box-shadow,border-color,background-color] duration-700 ease-in-out will-change-transform",
+                        "group relative h-full overflow-hidden border transition-[box-shadow,border-color,background-color] duration-700 ease-in-out",
                         isFeatured
-                          ? "z-10 -translate-y-1 translate-x-4 rotate-[1.5deg] scale-[1.02] border-gold/50 bg-zinc-950 text-white shadow-[0_22px_55px_-28px_rgba(17,17,17,0.55),0_0_24px_-14px_rgba(212,175,55,0.35)] sm:-translate-y-1 sm:translate-x-6 sm:scale-[1.03]"
-                          : "translate-x-0 rotate-0 scale-[0.99] border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
+                          ? "z-10 border-gold/50 bg-gradient-to-br from-crimson to-crimson-deep text-white shadow-[0_22px_55px_-28px_rgba(87,12,24,0.65),0_0_24px_-14px_rgba(212,175,55,0.35)]"
+                          : "border-zinc-200 bg-white/90 text-zinc-950 opacity-85 shadow-[0_12px_35px_-28px_rgba(17,17,17,0.2)]",
                       )}
                     >
                       {isFeatured && (
@@ -266,10 +332,17 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
                         <div
                           className={cn(
                             "grid h-14 w-14 place-items-center rounded-2xl transition-all duration-700 ease-in-out group-hover:scale-110",
-                            isFeatured ? "bg-gold text-zinc-950" : "bg-zinc-950 text-white",
+                            isFeatured ? "bg-gold text-zinc-950" : "bg-crimson-deep text-white",
                           )}
                         >
-                          <Icon className="h-6 w-6" />
+                          <span
+                            ref={(element) => {
+                              iconRefs.current[index] = element;
+                            }}
+                            className="grid place-items-center"
+                          >
+                            <Icon className="h-6 w-6" aria-hidden="true" />
+                          </span>
                         </div>
 
                         <h3
@@ -307,7 +380,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
           onClick={() => navigateSlide(-1)}
           aria-label={`Previous ${itemLabel}`}
           disabled={items.length < 2}
-          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-zinc-950 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-crimson-deep hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
         </button>
@@ -334,7 +407,7 @@ export function FeatureCarousel({ items, ariaLabel, itemLabel }: FeatureCarousel
           onClick={() => navigateSlide(1)}
           aria-label={`Next ${itemLabel}`}
           disabled={items.length < 2}
-          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-zinc-950 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className="grid h-10 w-10 place-items-center rounded-full border border-zinc-300 bg-white text-zinc-900 transition-colors hover:border-gold hover:bg-crimson-deep hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronRight aria-hidden="true" className="h-5 w-5" />
         </button>

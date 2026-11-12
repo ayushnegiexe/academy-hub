@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Users,
   Mail,
+  Phone,
   Play,
   Pause,
 } from "lucide-react";
@@ -174,21 +175,25 @@ function Hero() {
 const PILLARS = [
   {
     icon: Target,
+    motion: "target",
     title: "Technical",
     desc: "Ball mastery, first touch and 1v1s built through consistent, focused repetition.",
   },
   {
     icon: Zap,
+    motion: "zap",
     title: "Tactical",
     desc: "Simple, age-appropriate principles of play — positioning, decisions, and reading the game.",
   },
   {
     icon: Heart,
+    motion: "heart",
     title: "Physical",
     desc: "Age-appropriate movement, coordination and conditioning — never overloaded.",
   },
   {
     icon: Shield,
+    motion: "shield",
     title: "Mental",
     desc: "Confidence, focus and respect for teammates, opponents and the game itself.",
   },
@@ -349,7 +354,7 @@ function TheCoach() {
           </div>
         </div>
         <div>
-          <Badge className="mb-4 bg-zinc-950 text-white">Elite Coaching</Badge>
+          <Badge className="mb-4 bg-primary/10 text-primary">Elite Coaching</Badge>
           <h2 className="font-display text-4xl uppercase leading-[0.95] md:text-6xl text-zinc-950">
             One coach.
             <br />
@@ -372,10 +377,10 @@ function TheCoach() {
       <div
         role="region"
         aria-label="Our coaching approach"
-        className="relative mt-16 overflow-hidden border-y border-gold/25 bg-zinc-950 py-5"
+        className="relative mt-16 overflow-hidden border-y border-gold/25 bg-crimson-deep py-5"
       >
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-zinc-950 to-transparent md:w-32" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-zinc-950 to-transparent md:w-32" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-crimson-deep to-transparent md:w-32" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-crimson-deep to-transparent md:w-32" />
         <div className="flex w-max animate-marquee">
           {[0, 1].map((copy) => (
             <div
@@ -469,39 +474,46 @@ function SoldierTribute() {
 /* ---------------- FINAL CTA ---------------- */
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden py-32 text-center text-white">
-      <img src={pitchImg} alt="" className="absolute inset-0 h-full w-full object-cover -z-10" />
-      <div className="absolute inset-0 bg-hero-gradient opacity-95 -z-10" />
-      <div className="absolute inset-0 bg-black/50 -z-10" />
-      <div className="relative mx-auto max-w-4xl px-4 md:px-6">
-        <div className="relative mx-auto mb-10 w-fit">
-          {/* warm glow behind the mark */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, color-mix(in oklab, var(--gold) 45%, transparent) 0%, color-mix(in oklab, var(--gold) 12%, transparent) 45%, transparent 72%)",
-            }}
-          />
-          <img
-            src={logoLight}
-            alt="Devsheel Football Academy"
-            className="relative mx-auto h-40 w-auto brightness-110 contrast-110 saturate-125 drop-shadow-[0_10px_36px_rgba(0,0,0,0.85)] md:h-52"
-          />
-        </div>
-        <h2 className="font-display text-5xl uppercase leading-[0.95] text-white [text-shadow:0_4px_18px_rgba(0,0,0,0.85)] md:text-7xl">
-          Come and{" "}
-          <span className="text-gold [text-shadow:0_4px_18px_rgba(0,0,0,0.9)]">train.</span>
-        </h2>
-        <div className="mt-10 flex justify-center">
-          <Button
-            asChild
-            size="lg"
-            className="rounded-full bg-gold-gradient px-12 h-16 text-lg font-black uppercase tracking-widest text-ink shadow-gold hover:scale-105 transition-transform"
-          >
-            <Link to={"/contact" as any}>Contact us now</Link>
-          </Button>
+    <section className="relative overflow-hidden py-20 text-white md:py-28">
+      <img src={pitchImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-zinc-950/75" aria-hidden />
+      <div
+        className="absolute inset-0 bg-gradient-to-r from-crimson-deep/80 via-transparent to-black/35"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+        <div className="overflow-hidden rounded-3xl border border-white/15 bg-zinc-950/60 p-7 shadow-2xl backdrop-blur-md md:p-12">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.25em] text-gold">
+                Take the first step
+              </p>
+              <h2 className="font-display text-4xl uppercase leading-[0.98] md:text-5xl">
+                Start with a trial session.
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75 md:text-base">
+                Tell us a little about your player and we’ll be in touch to arrange a trial session.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:flex-col">
+              <Button asChild size="lg" className="rounded-full px-7">
+                <Link to="/contact">
+                  Book a trial <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-full border-white/25 bg-white/5 px-7 text-white hover:bg-white/10 hover:text-white"
+              >
+                <a href="tel:+918218245579">
+                  <Phone className="mr-2 h-4 w-4" />
+                  Call the academy
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

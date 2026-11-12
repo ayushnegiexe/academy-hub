@@ -7,7 +7,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 
 const NAV = [
   { to: "/", label: "Home", blurb: "Overview of the academy and how we train." },
-  { to: "/about", label: "Academy", blurb: "Our story, approach, and what we stand for." },
+  { to: "/about", label: "About Us", blurb: "Our story, approach, and what we stand for." },
   {
     to: "/playbook",
     label: "Academy Playbook",

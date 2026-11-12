@@ -1,64 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
-import type { UseEmblaCarouselType } from "embla-carousel-react";
-import {
-  Heart,
-  Compass,
-  Users,
-  Trophy,
-  ArrowRight,
-  MapPin,
-  Clock,
-  Ruler,
-  Goal,
-  Camera,
-  Info,
-  Construction,
-} from "lucide-react";
+import { Heart, Compass, Users, Trophy, ArrowRight, MapPin, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FeatureCarousel } from "@/components/feature-carousel";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import matchWide from "@/assets/match-wide.jpg";
 import duelBall from "@/assets/duel-ball.jpg";
-import runningPair from "@/assets/running-pair.jpg";
-import sessionGround from "@/assets/session-ground.jpg";
-import playerKit from "@/assets/player-kit.jpg";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "The Academy — Devsheel Football Academy" },
+      { title: "About Us — Devsheel Football Academy" },
       {
         name: "description",
         content:
           "A young grassroots football academy training U10 to U18 — our approach, our values and photos from real sessions and matches.",
       },
-      { property: "og:title", content: "The Academy — Devsheel Football Academy" },
+      { property: "og:title", content: "About Us — Devsheel Football Academy" },
       {
         property: "og:description",
         content: "Our approach, our values and photos from real Devsheel sessions and matches.",
@@ -70,83 +34,29 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
-const tournamentPhotos = [
-  {
-    src: matchWide,
-    alt: "Devsheel players lining up during a tournament match",
-    caption: "Tournament match day",
-    note: "An away tournament we travelled to — not our home ground.",
-  },
-  {
-    src: duelBall,
-    alt: "Two players contesting the ball mid-air at a tournament",
-    caption: "Contesting every ball",
-    note: "Aerial duels against an older, stronger side.",
-  },
-  {
-    src: runningPair,
-    alt: "Two Devsheel players running side by side at a tournament",
-    caption: "Pressing in pairs",
-    note: "Recovery runs after losing the ball high up the pitch.",
-  },
-  {
-    src: sessionGround,
-    alt: "Warm-up before a tournament fixture",
-    caption: "Pre-match warm-up",
-    note: "Rondo and activation work before kick-off.",
-  },
-  {
-    src: playerKit,
-    alt: "Player in Devsheel kit at the tournament",
-    caption: "In Devsheel colours",
-    note: "First outing in the academy kit.",
-  },
-];
-
 const VALUES = [
-  { icon: Heart, title: "Passion", desc: "Love the ball. Love the process." },
+  { icon: Heart, motion: "heart", title: "Passion", desc: "Love the ball. Love the process." },
   {
     icon: Compass,
+    motion: "compass",
     title: "Discipline",
     desc: "On time, in kit, and in effort — every session.",
   },
-  { icon: Users, title: "Team", desc: "Respect for teammates, opponents and the game." },
-  { icon: Trophy, title: "Excellence", desc: "Chase mastery, not just the scoreline." },
+  {
+    icon: Users,
+    motion: "users",
+    title: "Team",
+    desc: "Respect for teammates, opponents and the game.",
+  },
+  {
+    icon: Trophy,
+    motion: "trophy",
+    title: "Excellence",
+    desc: "Chase mastery, not just the scoreline.",
+  },
 ];
 
-type CarouselApi = UseEmblaCarouselType[1];
-
 function AboutPage() {
-  const [galleryApi, setGalleryApi] = useState<CarouselApi | null>(null);
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const setGalleryCarouselApi = useCallback((api: CarouselApi) => {
-    setGalleryApi(api);
-  }, []);
-
-  useEffect(() => {
-    if (!galleryApi) return;
-
-    const updateActivePhoto = () => setActivePhotoIndex(galleryApi.selectedScrollSnap());
-    updateActivePhoto();
-    galleryApi.on("select", updateActivePhoto);
-    galleryApi.on("reInit", updateActivePhoto);
-
-    return () => {
-      galleryApi.off("select", updateActivePhoto);
-      galleryApi.off("reInit", updateActivePhoto);
-    };
-  }, [galleryApi]);
-
-  useEffect(() => {
-    if (!galleryApi || galleryApi.scrollSnapList().length < 2) return;
-
-    const autoplayInterval = setInterval(() => {
-      if (document.visibilityState === "visible") galleryApi.scrollNext();
-    }, 4000);
-
-    return () => clearInterval(autoplayInterval);
-  }, [galleryApi]);
-
   return (
     <>
       {/* HERO WITH PHOTO */}
@@ -162,7 +72,7 @@ function AboutPage() {
         <div className="absolute inset-0 pitch-lines opacity-25" aria-hidden />
         <div className="relative mx-auto max-w-7xl px-4 md:px-6">
           <Badge className="mb-4 border-gold/40 bg-white/10 text-gold uppercase tracking-widest">
-            The Academy
+            About Us
           </Badge>
           <h1 className="max-w-3xl font-display text-5xl uppercase leading-[0.95] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] md:text-7xl">
             Built on grit.
@@ -198,12 +108,13 @@ function AboutPage() {
           </h2>
           <p className="mt-4 text-muted-foreground font-medium">
             Devsheel is new. We don't claim trophies we haven't won or facilities we don't have.
-            What we do have is a proper ground, a full session plan and a coach who is at every
-            training.
+            What we do have is a proper ground, structured training sessions and a coach present at
+            every training session.
           </p>
           <p className="mt-3 text-muted-foreground font-medium">
-            We play friendlies and local tournaments when they come up, and the rest of the time we
-            work on first touch, movement, decisions and behaviour.
+            We play friendlies and local tournaments when opportunities come up. The rest of the
+            time, we focus on the fundamentals: first touch, movement, decision-making and
+            behaviour.
           </p>
           <div className="mt-6 flex gap-3">
             <Button asChild className="rounded-full">
@@ -231,257 +142,163 @@ function AboutPage() {
         </div>
       </section>
 
-      {/* TOURNAMENT SECTION */}
-      <section
-        id="tournament"
-        className="relative overflow-hidden bg-hero-gradient py-20 text-white scroll-mt-24"
-      >
-        <div className="absolute inset-0 pitch-lines opacity-25" aria-hidden />
-        <div className="absolute inset-0 bg-black/40" aria-hidden />
-        <div className="relative mx-auto max-w-7xl px-4 md:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div className="max-w-2xl">
-              <Badge className="mb-4 border-gold/40 bg-white/10 text-gold uppercase tracking-widest">
-                Tournament
-              </Badge>
-              <h2 className="font-display text-4xl uppercase leading-[0.95] md:text-5xl">
-                Away days.
-                <br />
-                <span className="shine-text">Real competition.</span>
-              </h2>
-              <p className="mt-4 font-medium text-white/85">
-                These photos are from a tournament we travelled to play — an away ground, not ours.
-                Tournaments are where the training gets tested.
-              </p>
-            </div>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="rounded-full border-gold/50 bg-white/10 text-white hover:bg-white/20"
-                >
-                  <Info className="mr-2 h-4 w-4" /> About these photos
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 border-zinc-800 bg-zinc-950 text-white">
-                <p className="font-display text-lg uppercase text-gold">Away tournament</p>
-                <p className="mt-1 text-xs text-white/70">
-                  Taken at a tournament venue we were invited to. Our own academy ground gets its
-                  own section below once the photos are ready.
-                </p>
-              </PopoverContent>
-            </Popover>
+      {/* COACHING AND TRAINING */}
+      <section className="mx-auto max-w-7xl px-4 py-20 md:px-6">
+        <div className="grid gap-10 lg:grid-cols-2">
+          <div>
+            <Badge className="mb-4 bg-primary/10 text-primary uppercase tracking-widest">
+              Coaching
+            </Badge>
+            <h2 className="font-display text-4xl uppercase leading-[0.95] md:text-5xl">
+              A coach at every session.
+            </h2>
+            <p className="mt-4 max-w-xl font-medium text-muted-foreground">
+              A coach is present at every training session, guiding players through structured
+              practice and the fundamentals of the game.
+            </p>
           </div>
-
-          {/* Carousel of tournament photos */}
-          <Carousel
-            opts={{ align: "start", loop: true }}
-            setApi={setGalleryCarouselApi}
-            className="mt-12"
-          >
-            <CarouselContent className="-ml-4">
-              {tournamentPhotos.map((g, i) => (
-                <CarouselItem key={g.caption} className="pl-4 sm:basis-1/2 lg:basis-1/3">
-                  <Dialog>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DialogTrigger asChild>
-                          <button
-                            type="button"
-                            className="group relative block w-full overflow-hidden rounded-2xl border border-white/10 shadow-lift transition hover:-translate-y-1 hover:border-gold/60 hover:shadow-gold"
-                          >
-                            <img
-                              src={g.src}
-                              alt={g.alt}
-                              className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <span className="absolute left-4 top-4 rounded-full bg-gold-gradient px-3 py-1 text-[10px] font-black uppercase tracking-widest text-ink shadow-gold">
-                              Match {i + 1}
-                            </span>
-                            <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/90 to-transparent p-4 pt-12 text-left">
-                              <Camera className="h-4 w-4 text-gold" />
-                              <span className="text-xs font-black uppercase tracking-widest text-gold">
-                                {g.caption}
-                              </span>
-                            </span>
-                          </button>
-                        </DialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>{g.note}</TooltipContent>
-                    </Tooltip>
-                    <DialogContent className="max-w-4xl border-white/10 bg-zinc-950 p-2 text-white">
-                      <DialogTitle className="sr-only">{g.caption}</DialogTitle>
-                      <DialogDescription className="sr-only">{g.alt}</DialogDescription>
-                      <img src={g.src} alt={g.alt} className="w-full rounded-lg object-contain" />
-                      <p className="px-3 pb-1 pt-1 text-xs font-black uppercase tracking-widest text-gold">
-                        {g.caption}
-                      </p>
-                      <p className="px-3 pb-2 text-xs text-white/60">{g.note}</p>
-                    </DialogContent>
-                  </Dialog>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="border-gold/50 bg-white/10 text-white hover:bg-white/20" />
-            <CarouselNext className="border-gold/50 bg-white/10 text-white hover:bg-white/20" />
-          </Carousel>
-          {galleryApi && galleryApi.scrollSnapList().length > 1 && (
-            <div
-              className="mt-6 flex justify-center gap-2"
-              role="group"
-              aria-label="Choose tournament photo"
-            >
-              {galleryApi.scrollSnapList().map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => galleryApi.scrollTo(index)}
-                  aria-label={`Show tournament photo ${index + 1}`}
-                  aria-current={activePhotoIndex === index ? "true" : undefined}
-                  className={`h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
-                    activePhotoIndex === index
-                      ? "w-7 bg-gold"
-                      : "w-2.5 bg-white/40 hover:bg-white/70"
-                  }`}
-                />
+          <div>
+            <h3 className="font-display text-2xl uppercase">What we work on</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {["First touch", "Movement", "Decision-making", "Behaviour"].map((focus) => (
+                <Card key={focus}>
+                  <CardContent className="p-5">
+                    <p className="font-bold">{focus}</p>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          )}
-
-          {/* Dynamic widget: tabbed tournament notes */}
-          <Tabs defaultValue="format" className="mt-14">
-            <TabsList className="bg-white/10 text-white">
-              <TabsTrigger value="format">Format</TabsTrigger>
-              <TabsTrigger value="squad">Squad</TabsTrigger>
-              <TabsTrigger value="takeaways">Takeaways</TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="format"
-              className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
-            >
-              <p className="text-sm text-white/85">
-                Invitational group-stage tournament played over a weekend, short halves and rolling
-                substitutions.
-              </p>
-            </TabsContent>
-            <TabsContent
-              value="squad"
-              className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
-            >
-              <p className="text-sm text-white/85">
-                A mixed travelling squad drawn from our age groups, with everyone getting minutes.
-              </p>
-            </TabsContent>
-            <TabsContent
-              value="takeaways"
-              className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
-            >
-              <p className="text-sm text-white/85">
-                Sharper first touch under pressure and calmer decisions in tight areas — the next
-                block of sessions is built around it.
-              </p>
-            </TabsContent>
-          </Tabs>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Training days and times can vary. Call us to check the current schedule.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ACADEMY GROUND */}
-      <section id="ground" className="mx-auto max-w-7xl px-4 py-20 md:px-6 scroll-mt-24">
-        <div className="grid gap-10 lg:grid-cols-3">
-          <div>
-            <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 uppercase tracking-widest">
-              Academy ground
+      {/* PRACTICAL DETAILS */}
+      <section id="ground" className="bg-secondary/40 py-20 scroll-mt-24">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="max-w-2xl">
+            <Badge className="mb-4 bg-primary/10 text-primary uppercase tracking-widest">
+              Plan a visit
             </Badge>
             <h2 className="font-display text-4xl uppercase leading-[0.95] md:text-5xl">
-              Our own ground.
+              Find us and get started.
             </h2>
-            <p className="mt-4 font-medium text-muted-foreground">
-              Visit the Devsheel academy ground at Badowala, Premnagar Rd, Arcadia Grant, Dehradun,
-              Uttarakhand 248007. Pitch details and session timings coming soon.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {[
-                {
-                  icon: MapPin,
-                  label:
-                    "Location — Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007",
-                  tooltip:
-                    "The Devsheel academy ground is at Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007.",
-                },
-                { icon: Ruler, label: "Pitch size — TBA", tooltip: "Details to be confirmed." },
-                { icon: Goal, label: "Goals — TBA", tooltip: "Details to be confirmed." },
-                { icon: Clock, label: "Timings — TBA", tooltip: "Details to be confirmed." },
-              ].map(({ icon: Icon, label, tooltip }) => (
-                <Tooltip key={label}>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-dashed border-border bg-secondary/40 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5" /> {label}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{tooltip}</TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-
-            <Button asChild variant="outline" className="mt-6 rounded-full">
-              <Link to="/contact">
-                Ask about the ground <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </div>
-
-          <div className="lg:col-span-2">
-            <Card className="overflow-hidden border-dashed">
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            <Card>
               <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <Construction className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-display text-xl uppercase">Photos coming soon</p>
-                    <p className="text-xs text-muted-foreground">
-                      Placeholders below — replace with real ground photos.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-4">
-                  <Skeleton className="col-span-2 aspect-[16/9] w-full rounded-2xl" />
-                  <Skeleton className="aspect-square w-full rounded-2xl" />
-                  <Skeleton className="aspect-square w-full rounded-2xl" />
-                </div>
-
-                <Accordion type="single" collapsible className="mt-6">
-                  <AccordionItem value="a">
-                    <AccordionTrigger className="text-sm uppercase tracking-widest">
-                      Facilities
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-muted-foreground">
-                      Details to be added.
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="b">
-                    <AccordionTrigger className="text-sm uppercase tracking-widest">
-                      Getting there
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-muted-foreground">
-                      Directions and map to be added.
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="c">
-                    <AccordionTrigger className="text-sm uppercase tracking-widest">
-                      Session timings
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-muted-foreground">
-                      Weekly schedule to be added.
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                <MapPin className="h-5 w-5 text-primary" />
+                <h3 className="mt-4 font-display text-xl uppercase">Our ground</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Badowala, Premnagar Rd, Arcadia Grant, Dehradun, Uttarakhand 248007
+                </p>
+                <a
+                  className="mt-4 inline-flex items-center font-bold text-primary underline-offset-4 hover:underline"
+                  href="https://www.google.com/maps/search/?api=1&query=Badowala%2C%20Premnagar%20Rd%2C%20Arcadia%20Grant%2C%20Dehradun%2C%20Uttarakhand%20248007"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Get directions <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="mt-4 font-display text-xl uppercase">Age groups</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Training is available for U10, U12, U15 and U18. The trial form checks age-group
+                  eligibility.
+                </p>
+                <Button asChild variant="link" className="mt-2 h-auto p-0">
+                  <Link to="/programs">
+                    Explore programs <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Phone className="h-5 w-5 text-primary" />
+                <h3 className="mt-4 font-display text-xl uppercase">Schedule and fees</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Call us for current training times and fee information.
+                </p>
+                <a
+                  className="mt-4 inline-flex items-center font-bold text-primary underline-offset-4 hover:underline"
+                  href="tel:+918218245579"
+                >
+                  +91 821 824 5579
+                </a>
               </CardContent>
             </Card>
           </div>
+        </div>
+      </section>
+
+      {/* PARENT FAQ */}
+      <section className="mx-auto max-w-4xl px-4 py-20 md:px-6">
+        <div className="text-center">
+          <Badge className="mb-4 bg-primary/10 text-primary uppercase tracking-widest">
+            For parents
+          </Badge>
+          <h2 className="font-display text-4xl uppercase md:text-5xl">Good to know.</h2>
+        </div>
+        <Accordion type="single" collapsible className="mt-8">
+          <AccordionItem value="trial">
+            <AccordionTrigger>How do I arrange a trial?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              A parent or guardian can submit the trial request form. The academy team will get in
+              touch to arrange a session.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="training">
+            <AccordionTrigger>What do players work on?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              Structured sessions focus on first touch, movement, decision-making and behaviour. A
+              coach is present at every training session.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="age-groups">
+            <AccordionTrigger>Which age groups are available?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              The academy has U10, U12, U15 and U18 groups. The trial request form uses the
+              player&apos;s date of birth to show eligible groups.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="schedule">
+            <AccordionTrigger>Where can I check training times and fees?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              Call the academy at{" "}
+              <a className="font-semibold text-primary underline" href="tel:+918218245579">
+                +91 821 824 5579
+              </a>{" "}
+              for current schedule and fee details.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </section>
+
+      {/* TRIAL CALL TO ACTION */}
+      <section className="relative overflow-hidden bg-hero-gradient py-16 text-white">
+        <div className="absolute inset-0 pitch-lines opacity-25" aria-hidden />
+        <div className="relative mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 md:flex-row md:items-center md:px-6">
+          <div>
+            <Badge className="mb-4 border-gold/40 bg-white/10 text-gold uppercase tracking-widest">
+              Take the first step
+            </Badge>
+            <h2 className="font-display text-4xl uppercase md:text-5xl">Come for a trial.</h2>
+            <p className="mt-3 max-w-xl text-white/80">
+              Tell us about your player and the team will get in touch to arrange a session.
+            </p>
+          </div>
+          <Button asChild size="lg" className="rounded-full">
+            <Link to="/contact">
+              Request a trial <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
     </>
